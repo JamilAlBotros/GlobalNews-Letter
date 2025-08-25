@@ -12,7 +12,7 @@ export class ArticleLinkScraper {
   private dbManager: GoogleRSSDatabaseManager;
   private rssProvider: RSSProvider;
   private isRunning = false;
-  private intervalId?: NodeJS.Timeout;
+  private intervalId?: NodeJS.Timeout | undefined;
 
   constructor(dbPath?: string) {
     this.dbManager = new GoogleRSSDatabaseManager(dbPath);
@@ -108,10 +108,11 @@ export class ArticleLinkScraper {
       console.log(`   🆕 New article links: ${totalNewLinks}`);
       
       // Update daily stats
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0]!;
       for (const feed of activeFeeds) {
-        if (feed.id) {
-          await this.dbManager.updateProcessingStats(feed.id, today, { linksScraped: 0 });
+        if (feed.id && typeof feed.id === 'string') {
+          const feedId: string = feed.id;
+          await this.dbManager.updateProcessingStats(feedId, today, { linksScraped: 0 });
         } // Will be updated per feed
       }
 
@@ -157,12 +158,13 @@ export class ArticleLinkScraper {
       console.log(`   ✅ Saved ${newLinksCount} new article links`);
 
       // Update feed last scraped time and article count
-      if (feed.id) {
-        await this.dbManager.updateFeedLastScraped(feed.id, articles.length);
+      if (feed.id && typeof feed.id === 'string') {
+        const feedId: string = feed.id;
+        await this.dbManager.updateFeedLastScraped(feedId, articles.length);
 
         // Update daily stats
-        const today = new Date().toISOString().split('T')[0];
-        await this.dbManager.updateProcessingStats(feed.id, today, {
+        const today = new Date().toISOString().split('T')[0]!;
+        await this.dbManager.updateProcessingStats(feedId, today, {
           linksScraped: newLinksCount
         });
       }

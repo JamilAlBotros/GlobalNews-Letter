@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Language support
-export const LanguageSchema = z.enum(['english', 'spanish', 'arabic']);
+export const LanguageSchema = z.enum(['english', 'spanish', 'arabic', 'portuguese', 'french', 'chinese', 'japanese']);
 export type Language = z.infer<typeof LanguageSchema>;
 
 // Article categories

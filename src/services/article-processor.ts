@@ -184,7 +184,7 @@ export class ArticleProcessor {
       // Update daily stats
       const today = new Date().toISOString().split('T')[0];
       if (link.feedId) {
-        await this.dbManager.updateProcessingStats(link.feedId, today, {
+        await this.dbManager.updateProcessingStats(link.feedId!, today, {
           articlesExtracted: 1,
           articlesSummarized: summary ? 1 : 0
         });

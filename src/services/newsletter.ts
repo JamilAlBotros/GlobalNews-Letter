@@ -118,8 +118,8 @@ export class NewsletterService {
         categories: this.extractCategories(articles),
         sources: [...new Set(articles.map(a => a.source))],
         dateRange: {
-          earliest: articles.length > 0 ? articles.reduce((min, a) => a.publishedAt < min ? a.publishedAt : min, articles[0].publishedAt).toISOString() : undefined,
-          latest: articles.length > 0 ? articles.reduce((max, a) => a.publishedAt > max ? a.publishedAt : max, articles[0].publishedAt).toISOString() : undefined
+          earliest: articles.length > 0 ? articles.reduce((min, a) => a.publishedAt < min ? a.publishedAt : min, articles[0]!.publishedAt).toISOString() : undefined,
+          latest: articles.length > 0 ? articles.reduce((max, a) => a.publishedAt > max ? a.publishedAt : max, articles[0]!.publishedAt).toISOString() : undefined
         }
       };
     }

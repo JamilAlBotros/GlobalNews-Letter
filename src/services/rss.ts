@@ -154,13 +154,19 @@ export class RSSService {
           // Generate AI summary
           const { summary } = await this.llmService.processArticle(
             article.title,
-            article.description,
-            article.content,
+            article.description ?? null,
+            article.content ?? null,
             feed.language
           );
 
-          article.summary = summary;
-          processedArticles.push(article);
+          // Don't mutate the original article object
+          processedArticles.push({
+            ...article,
+            author: article.author ?? null,
+            content: article.content ?? null,
+            imageUrl: article.imageUrl ?? null,
+            summary: summary || null
+          });
         } catch (error) {
           console.warn(`Failed to process RSS article: ${rssArticle.title}`, error);
         }

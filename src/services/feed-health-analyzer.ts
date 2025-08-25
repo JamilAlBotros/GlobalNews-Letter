@@ -84,9 +84,9 @@ export class FeedHealthAnalyzer {
 
     // Analyze different aspects
     const volume = analysisConfig.analyzeVolume ? await this.analyzeVolume(feedId, analysisConfig.volumeThresholds) : {} as VolumeMetrics;
-    const quality = analysisConfig.analyzeQuality ? await this.analyzeQuality(feedId, analysisConfig.qualityThresholds) : {} as QualityMetrics;
+    const quality = analysisConfig.analyzeQuality ? await this.analyzeQuality(feedId) : {} as QualityMetrics;
     const credibility = analysisConfig.analyzeCredibility ? await this.analyzeCredibility(feedId) : {} as CredibilityMetrics;
-    const technical = analysisConfig.analyzeTechnical ? await this.analyzeTechnical(feedId, analysisConfig.technicalThresholds) : {} as TechnicalMetrics;
+    const technical = analysisConfig.analyzeTechnical ? await this.analyzeTechnical(feedId) : {} as TechnicalMetrics;
     const relevance = analysisConfig.analyzeRelevance ? await this.analyzeRelevance(feedId) : {} as RelevanceMetrics;
     const spam = analysisConfig.analyzeSpam ? await this.analyzeSpam(feedId) : {} as SpamDetection;
     const localization = analysisConfig.analyzeLocalization ? await this.analyzeLocalization(feedId, feedInfo.language) : {} as LocalizationHealth;
@@ -99,7 +99,7 @@ export class FeedHealthAnalyzer {
     const alerts = await this.generateAlerts(feedId, { volume, quality, credibility, technical, relevance }, analysisConfig);
     
     // Generate recommendations
-    const recommendations = this.generateRecommendations(volume, quality, credibility, technical, relevance, spam);
+    const recommendations = this.generateRecommendations(volume, quality, credibility, technical, spam);
     
     // Get historical snapshots
     const last24h = await this.getHistoricalSnapshot(feedId, 24);
@@ -267,7 +267,11 @@ export class FeedHealthAnalyzer {
     const batchThreshold = 5; // 5 minutes
     let batchCount = 0;
     for (let i = 1; i < sortedArticles.length; i++) {
-      const gap = new Date(sortedArticles[i].createdAt).getTime() - new Date(sortedArticles[i-1].createdAt).getTime();
+      const current = sortedArticles[i];
+      const previous = sortedArticles[i-1];
+      if (!current || !previous) continue;
+      
+      const gap = new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime();
       if (gap < batchThreshold * 60 * 1000) {
         batchCount++;
       }
@@ -282,7 +286,7 @@ export class FeedHealthAnalyzer {
     };
   }
 
-  private async analyzeQuality(feedId: string, thresholds: any): Promise<QualityMetrics> {
+  private async analyzeQuality(feedId: string): Promise<QualityMetrics> {
     const articles = await this.getRecentArticles(feedId, 7 * 24); // Last 7 days
     
     if (articles.length === 0) {
@@ -417,7 +421,7 @@ export class FeedHealthAnalyzer {
     };
   }
 
-  private async analyzeTechnical(feedId: string, thresholds: any): Promise<TechnicalMetrics> {
+  private async analyzeTechnical(feedId: string): Promise<TechnicalMetrics> {
     // Get technical data from feed fetch logs
     const technicalData = await this.getTechnicalData(feedId, 7 * 24); // Last 7 days
     
@@ -604,7 +608,7 @@ export class FeedHealthAnalyzer {
 
     // Analyze publishing patterns for batch publishing
     const timestamps = articles.map(a => a.createdAt);
-    const duplicateTimestamps = new Set(timestamps).size < timestamps.length;
+    // const duplicateTimestamps = new Set(timestamps).size < timestamps.length; // Unused variable
     const identicalTimestamps = timestamps.length - new Set(timestamps).size;
     
     // Detect batch publishing (many articles within 5-minute windows)
@@ -705,7 +709,7 @@ export class FeedHealthAnalyzer {
     // For now, return mock data based on feed activity
     const articles = await this.getRecentArticles(feedId, hoursBack);
     
-    return articles.map((article, index) => ({
+    return articles.map((article) => ({
       feedId,
       responseTime: 1000 + Math.random() * 3000,
       httpStatus: Math.random() > 0.05 ? 200 : 404,
@@ -1073,7 +1077,6 @@ export class FeedHealthAnalyzer {
     quality: Partial<QualityMetrics>,
     credibility: Partial<CredibilityMetrics>,
     technical: Partial<TechnicalMetrics>,
-    relevance: Partial<RelevanceMetrics>,
     spam: Partial<SpamDetection>
   ): string[] {
     const recommendations: string[] = [];

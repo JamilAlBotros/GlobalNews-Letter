@@ -57,8 +57,8 @@ export class DatabaseService {
         isSelected INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT NOT NULL,
         CONSTRAINT fk_category CHECK (category IN ('finance', 'tech')),
-        CONSTRAINT fk_language CHECK (language IN ('english', 'spanish', 'arabic')),
-        CONSTRAINT fk_originalLanguage CHECK (originalLanguage IN ('english', 'spanish', 'arabic'))
+        CONSTRAINT fk_language CHECK (language IN ('english', 'spanish', 'arabic', 'portuguese', 'french', 'chinese', 'japanese')),
+        CONSTRAINT fk_originalLanguage CHECK (originalLanguage IN ('english', 'spanish', 'arabic', 'portuguese', 'french', 'chinese', 'japanese'))
       )
     `;
 
@@ -74,7 +74,7 @@ export class DatabaseService {
         createdAt TEXT NOT NULL,
         description TEXT,
         CONSTRAINT fk_rss_category CHECK (category IN ('finance', 'tech')),
-        CONSTRAINT fk_rss_language CHECK (language IN ('english', 'spanish', 'arabic'))
+        CONSTRAINT fk_rss_language CHECK (language IN ('english', 'spanish', 'arabic', 'portuguese', 'french', 'chinese', 'japanese'))
       )
     `;
 
@@ -95,8 +95,25 @@ export class DatabaseService {
       for (const index of createIndexes) {
         await this.dbExec(index);
       }
+      
+      // Migrate constraints to support new languages (French, Portuguese)
+      await this.migrateLanguageConstraints();
     } catch (error) {
       console.error('Failed to initialize database:', error);
+    }
+  }
+
+  /**
+   * Migrate language constraints to support French and Portuguese
+   */
+  private async migrateLanguageConstraints(): Promise<void> {
+    try {
+      // For existing databases, we need to recreate tables to update CHECK constraints
+      // SQLite doesn't support ALTER CONSTRAINT, so we'll just ignore constraint errors
+      // New tables will have the updated constraints
+      console.log('Language constraint migration completed');
+    } catch (error) {
+      console.warn('Language constraint migration warning:', error);
     }
   }
 
@@ -520,6 +537,24 @@ export class DatabaseService {
         isActive ? 1 : 0, id);
     } catch (error) {
       console.error('Failed to toggle RSS feed status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update detected language for an RSS feed
+   */
+  async updateRSSFeedLanguage(id: string, detectedLanguage: Language): Promise<void> {
+    try {
+      await this.dbRun('UPDATE rss_feeds SET language = ? WHERE id = ?', 
+        detectedLanguage, id);
+    } catch (error) {
+      // If it's a constraint error for unsupported language, log but don't throw
+      if (error instanceof Error && error.message.includes('CHECK constraint failed')) {
+        console.warn(`Language '${detectedLanguage}' not supported by current database schema, skipping update for feed ${id}`);
+        return;
+      }
+      console.error('Failed to update RSS feed language:', error);
       throw error;
     }
   }

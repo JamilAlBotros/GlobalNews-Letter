@@ -1,30 +1,43 @@
 import { randomUUID } from 'crypto';
-import { NewsAPIProvider } from '../providers/newsapi.js';
+import { ArticleFetchService } from './article-fetch.js';
+import { ArticleProcessingService } from './article-processing.js';
+import { ArticleStorageService } from './article-storage.js';
+import { DuplicationService } from './duplication.js';
 import { LLMService } from './llm.js';
 import { DatabaseService } from './database.js';
 import { RSSService } from './rss.js';
 import type { 
   Article, 
-  NewsAPIArticle, 
   Category, 
   Language,
   FilterOptions,
-  RSSFeed
+  RSSFeed,
+  NewsAPIArticle
 } from '../types/index.js';
 
 /**
- * Main service for fetching, processing, and managing articles
+ * Orchestration service that coordinates focused article services
+ * Refactored to use single-responsibility services
  */
 export class ArticleService {
-  private newsAPI: NewsAPIProvider;
-  private llmService: LLMService;
+  private fetchService: ArticleFetchService;
+  private processingService: ArticleProcessingService;
+  private storageService: ArticleStorageService;
+  private duplicationService: DuplicationService;
   private database: DatabaseService;
+  private llmService: LLMService;
   public rssService: RSSService;
 
   constructor() {
-    this.newsAPI = new NewsAPIProvider();
+    // Initialize core services
     this.llmService = new LLMService();
     this.database = new DatabaseService();
+    
+    // Initialize focused services
+    this.fetchService = new ArticleFetchService();
+    this.processingService = new ArticleProcessingService(this.llmService);
+    this.storageService = new ArticleStorageService();
+    this.duplicationService = new DuplicationService(this.database);
     this.rssService = new RSSService(this.database, this.llmService);
   }
 
@@ -35,30 +48,18 @@ export class ArticleService {
     category: Category, 
     language: Language = 'english'
   ): Promise<Article[]> {
-    console.log(`Fetching ${category} articles in ${language}...`);
-    
     try {
-      const response = await this.newsAPI.fetchByCategory(category, language);
-      const articles = await this.processNewsAPIArticles(
+      const response = await this.fetchService.fetchByCategory(category, language);
+      const articles = await this.processingService.processNewsAPIArticles(
         response.articles, 
         category, 
         language
       );
       
-      // Filter out duplicates
-      const duplicateChecks = await Promise.all(
-        articles.map(async (article) => ({
-          article,
-          exists: await this.database.articleExists(article.url)
-        }))
-      );
-      
-      const newArticles = duplicateChecks
-        .filter(check => !check.exists)
-        .map(check => check.article);
+      const newArticles = await this.duplicationService.filterDuplicates(articles);
       
       if (newArticles.length > 0) {
-        await this.database.saveArticles(newArticles);
+        await this.storageService.saveArticles(newArticles);
         console.log(`Saved ${newArticles.length} new ${category} articles`);
       } else {
         console.log(`No new ${category} articles found`);
@@ -78,35 +79,22 @@ export class ArticleService {
     keyword: string,
     options: Omit<FilterOptions, 'keyword'> = { sortBy: 'publishedAt' }
   ): Promise<Article[]> {
-    console.log(`Searching articles for: "${keyword}"`);
-    
     try {
-      const response = await this.newsAPI.searchArticles(keyword, options);
+      const response = await this.fetchService.searchArticles(keyword, options);
       
-      // Determine category based on keyword (simple heuristic)
-      const category = this.determineCategory(keyword);
+      const category = this.fetchService.determineCategory(keyword);
       const language = options.language || 'english';
       
-      const articles = await this.processNewsAPIArticles(
+      const articles = await this.processingService.processNewsAPIArticles(
         response.articles, 
         category, 
         language
       );
       
-      // Filter out duplicates
-      const duplicateChecks = await Promise.all(
-        articles.map(async (article) => ({
-          article,
-          exists: await this.database.articleExists(article.url)
-        }))
-      );
-      
-      const newArticles = duplicateChecks
-        .filter(check => !check.exists)
-        .map(check => check.article);
+      const newArticles = await this.duplicationService.filterDuplicates(articles);
       
       if (newArticles.length > 0) {
-        await this.database.saveArticles(newArticles);
+        await this.storageService.saveArticles(newArticles);
         console.log(`Saved ${newArticles.length} new articles for "${keyword}"`);
       }
 
@@ -124,30 +112,18 @@ export class ArticleService {
     category: Category,
     language: Language = 'english'
   ): Promise<Article[]> {
-    console.log(`Fetching top ${category} headlines in ${language}...`);
-    
     try {
-      const response = await this.newsAPI.getTopHeadlines(category, language);
-      const articles = await this.processNewsAPIArticles(
+      const response = await this.fetchService.fetchTopHeadlines(category, language);
+      const articles = await this.processingService.processNewsAPIArticles(
         response.articles, 
         category, 
         language
       );
       
-      // Filter out duplicates
-      const duplicateChecks = await Promise.all(
-        articles.map(async (article) => ({
-          article,
-          exists: await this.database.articleExists(article.url)
-        }))
-      );
-      
-      const newArticles = duplicateChecks
-        .filter(check => !check.exists)
-        .map(check => check.article);
+      const newArticles = await this.duplicationService.filterDuplicates(articles);
       
       if (newArticles.length > 0) {
-        await this.database.saveArticles(newArticles);
+        await this.storageService.saveArticles(newArticles);
         console.log(`Saved ${newArticles.length} top ${category} headlines`);
       }
 
@@ -162,82 +138,57 @@ export class ArticleService {
    * Get stored articles with filters
    */
   async getStoredArticles(filters: Partial<FilterOptions> = {}): Promise<Article[]> {
-    return await this.database.getArticles(filters);
+    return await this.storageService.getArticles(filters);
   }
 
   /**
    * Select articles for newsletter
    */
   async selectArticlesForNewsletter(articleIds: string[]): Promise<void> {
-    await this.database.selectArticles(articleIds);
-    console.log(`Selected ${articleIds.length} articles for newsletter`);
+    await this.storageService.selectArticles(articleIds);
   }
 
   /**
    * Unselect articles from newsletter
    */
   async unselectArticlesFromNewsletter(articleIds: string[]): Promise<void> {
-    await this.database.unselectArticles(articleIds);
-    console.log(`Unselected ${articleIds.length} articles from newsletter`);
+    await this.storageService.unselectArticles(articleIds);
   }
 
   /**
    * Get selected articles for newsletter generation
    */
   async getSelectedArticles(): Promise<Article[]> {
-    return await this.database.getSelectedArticles();
+    return await this.storageService.getSelectedArticles();
   }
 
   /**
    * Clear all selections
    */
   async clearAllSelections(): Promise<void> {
-    await this.database.clearSelections();
-    console.log('Cleared all article selections');
+    await this.storageService.clearAllSelections();
   }
 
   /**
    * Get article statistics
    */
   async getArticleStats(): Promise<Record<Category, number>> {
-    return await this.database.getArticleStats();
+    return await this.storageService.getArticleStats();
   }
 
   /**
    * Translate and re-summarize existing articles
    */
   async translateArticle(articleId: string, targetLanguage: Language): Promise<Article | null> {
-    const article = await this.database.getArticleById(articleId);
+    const article = await this.storageService.getArticleById(articleId);
     if (!article) {
       console.error(`Article not found: ${articleId}`);
       return null;
     }
 
-    if (article.language === targetLanguage) {
-      console.log(`Article is already in ${targetLanguage}`);
-      return article;
-    }
-
     try {
-      console.log(`Translating article to ${targetLanguage}...`);
-      
-      const { summary, translatedTitle } = await this.llmService.processArticle(
-        article.title,
-        article.description,
-        article.content,
-        targetLanguage
-      );
-
-      const translatedArticle: Article = {
-        ...article,
-        id: randomUUID(), // New ID for translated version
-        title: translatedTitle || article.title,
-        summary,
-        language: targetLanguage,
-        createdAt: new Date()
-      };
-
-      await this.database.saveArticle(translatedArticle);
+      const translatedArticle = await this.processingService.translateArticle(article, targetLanguage);
+      await this.storageService.saveArticle(translatedArticle);
       console.log(`Saved translated article in ${targetLanguage}`);
       
       return translatedArticle;
@@ -251,9 +202,7 @@ export class ArticleService {
    * Cleanup old articles
    */
   async cleanupOldArticles(days: number = 30): Promise<number> {
-    const deletedCount = await this.database.cleanupOldArticles(days);
-    console.log(`Cleaned up ${deletedCount} old articles`);
-    return deletedCount;
+    return await this.storageService.cleanupOldArticles(days);
   }
 
   /**
@@ -316,7 +265,7 @@ export class ArticleService {
    */
   async testServices(): Promise<{ newsAPI: boolean; llm: boolean; rssFeeds: number }> {
     const [newsAPIStatus, llmStatus] = await Promise.all([
-      this.newsAPI.testConnection(),
+      this.fetchService.testConnection(),
       this.llmService.testConnection()
     ]);
 
@@ -336,70 +285,4 @@ export class ArticleService {
     this.database.close();
   }
 
-  /**
-   * Process NewsAPI articles into internal Article format
-   */
-  private async processNewsAPIArticles(
-    newsArticles: NewsAPIArticle[],
-    category: Category,
-    language: Language
-  ): Promise<Article[]> {
-    const articles: Article[] = [];
-
-    for (const newsArticle of newsArticles) {
-      try {
-        // Generate summary using LLM
-        const { summary } = await this.llmService.processArticle(
-          newsArticle.title,
-          newsArticle.description,
-          newsArticle.content,
-          language
-        );
-
-        const article: Article = {
-          id: randomUUID(),
-          title: newsArticle.title,
-          author: newsArticle.author,
-          description: newsArticle.description,
-          url: newsArticle.url,
-          imageUrl: newsArticle.urlToImage,
-          publishedAt: new Date(newsArticle.publishedAt),
-          content: newsArticle.content,
-          category,
-          source: newsArticle.source.name,
-          summary,
-          language,
-          originalLanguage: language,
-          isSelected: false,
-          createdAt: new Date()
-        };
-
-        articles.push(article);
-      } catch (error) {
-        console.warn(`Failed to process article: ${newsArticle.title}`, error);
-        // Continue processing other articles
-      }
-    }
-
-    return articles;
-  }
-
-  /**
-   * Determine article category based on keyword (simple heuristic)
-   */
-  private determineCategory(keyword: string): Category {
-    const lowerKeyword = keyword.toLowerCase();
-    
-    const financeKeywords = ['finance', 'money', 'bank', 'investment', 'stock', 'crypto', 'economy'];
-    const techKeywords = ['technology', 'tech', 'software', 'ai', 'startup', 'programming', 'computer'];
-    
-    const isFinance = financeKeywords.some(k => lowerKeyword.includes(k));
-    const isTech = techKeywords.some(k => lowerKeyword.includes(k));
-    
-    if (isFinance && !isTech) return 'finance';
-    if (isTech && !isFinance) return 'tech';
-    
-    // Default to tech if both or neither match
-    return 'tech';
-  }
 }

@@ -243,7 +243,10 @@ export class GoogleRSSDatabaseManager {
         [],
         (err, rows) => {
           if (err) reject(err);
-          else resolve(rows as GoogleRSSFeed[] || []);
+          else {
+            const validatedRows = (rows || []).filter((row: any) => row.id != null) as GoogleRSSFeed[];
+            resolve(validatedRows);
+          }
         }
       );
     });

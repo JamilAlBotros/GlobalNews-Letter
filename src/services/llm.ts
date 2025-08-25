@@ -44,7 +44,8 @@ export class LLMService {
     const request: LLMRequest = {
       content,
       action: 'translate',
-      targetLanguage
+      targetLanguage,
+      maxLength: 500
     };
 
     const response = await this.callLLM(request);
@@ -79,7 +80,9 @@ export class LLMService {
         translatedTitle = await this.translateContent(title, targetLanguage);
       }
 
-      return { summary, translatedTitle };
+      return translatedTitle 
+        ? { summary, translatedTitle } 
+        : { summary };
     } catch (error) {
       console.warn('LLM processing failed, using fallback:', error);
       return this.getFallbackSummary(title, description, targetLanguage);
@@ -126,7 +129,7 @@ export class LLMService {
         throw new Error(`LLM API request failed: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       
       return {
         result: data.response?.trim() || 'No response generated',

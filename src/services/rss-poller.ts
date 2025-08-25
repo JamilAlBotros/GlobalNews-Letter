@@ -184,7 +184,7 @@ export class RSSPoller {
     
     if (this.intervalId) {
       clearInterval(this.intervalId);
-      this.intervalId = undefined as NodeJS.Timeout | undefined;
+      this.intervalId = undefined;
     }
   }
 
@@ -220,15 +220,15 @@ export class RSSPoller {
             id: articleId,
             title: article.title,
             link: article.link,
-            content: article.content || article.contentSnippet || undefined,
-            author: article.author || undefined,
+            content: article.content || article.contentSnippet,
+            author: article.author,
             pubDate: article.pubDate || new Date().toISOString(),
             createdAt: new Date().toISOString(),
-            feedId: this.config.feedId || undefined,
-            feedName: this.config.feedName || undefined,
-            country: this.config.country || undefined,
-            language: this.config.language || undefined,
-            category: this.config.category || undefined
+            feedId: this.config.feedId,
+            feedName: this.config.feedName,
+            country: this.config.country,
+            language: this.config.language,
+            category: this.config.category
           };
 
           await this.insertArticle(articleRecord);
@@ -279,7 +279,7 @@ export class RSSPoller {
 
       // Update error count if health tracking enabled
       if (this.healthManager && this.config.feedId) {
-        await this.incrementFeedErrorCount(this.config.feedId);
+        await this.incrementFeedErrorCount(this.config.feedId!);
       }
     } finally {
       const responseTime = Date.now() - startTime;

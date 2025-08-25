@@ -118,18 +118,24 @@ function parseOptions(args: string[]): CliOptions {
   
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue;
     
     if (arg.startsWith('--feed=')) {
-      options.feedId = arg.split('=')[1] || undefined;
+      const feedStr = arg.split('=')[1];
+      if (feedStr) {
+        options.feedId = feedStr;
+      }
     } else if (arg.startsWith('--days=')) {
       const dayStr = arg.split('=')[1];
-      options.days = dayStr ? parseInt(dayStr) : undefined;
+      if (dayStr) {
+        options.days = parseInt(dayStr);
+      }
     } else if (arg.startsWith('--format=')) {
-      const format = arg.split('=')[1];
-      options.format = format as any;
+      const formatStr = arg.split('=')[1];
+      options.format = formatStr as any;
     } else if (arg.startsWith('--severity=')) {
-      const severity = arg.split('=')[1];
-      options.severity = severity as any;
+      const severityStr = arg.split('=')[1];
+      options.severity = severityStr as any;
     } else if (arg === '--resolve') {
       options.resolve = true;
     } else if (arg === '--detailed') {

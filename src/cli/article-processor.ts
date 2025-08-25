@@ -93,18 +93,28 @@ function parseOptions(args: string[]): CliOptions {
   
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue;
     
     if (arg.startsWith('--batch=')) {
       const batchStr = arg.split('=')[1];
-      options.batchSize = batchStr ? parseInt(batchStr) : undefined;
+      if (batchStr) {
+        options.batchSize = parseInt(batchStr);
+      }
     } else if (arg.startsWith('--interval=')) {
       const intervalStr = arg.split('=')[1];
-      options.interval = intervalStr ? parseInt(intervalStr) : undefined;
+      if (intervalStr) {
+        options.interval = parseInt(intervalStr);
+      }
     } else if (arg.startsWith('--link=')) {
-      options.linkId = arg.split('=')[1] || undefined;
+      const linkStr = arg.split('=')[1];
+      if (linkStr) {
+        options.linkId = linkStr;
+      }
     } else if (arg.startsWith('--limit=')) {
       const limitStr = arg.split('=')[1];
-      options.limit = limitStr ? parseInt(limitStr) : undefined;
+      if (limitStr) {
+        options.limit = parseInt(limitStr);
+      }
     } else if (arg === '--retry') {
       options.retry = true;
     } else if (arg === '--details') {

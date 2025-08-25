@@ -47,7 +47,7 @@ async function main() {
         break;
         
       case 'recent':
-        const limit = parseInt(args[1]) || 10;
+        const limit = parseInt(args[1] || '10') || 10;
         await showRecentArticles(limit);
         break;
         

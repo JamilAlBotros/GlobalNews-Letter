@@ -76,7 +76,7 @@ export class ArticleService {
    */
   async searchAndStoreArticles(
     keyword: string,
-    options: Omit<FilterOptions, 'keyword'> = {}
+    options: Omit<FilterOptions, 'keyword'> = { sortBy: 'publishedAt' }
   ): Promise<Article[]> {
     console.log(`Searching articles for: "${keyword}"`);
     
@@ -250,8 +250,8 @@ export class ArticleService {
   /**
    * Cleanup old articles
    */
-  cleanupOldArticles(days: number = 30): number {
-    const deletedCount = this.database.cleanupOldArticles(days);
+  async cleanupOldArticles(days: number = 30): Promise<number> {
+    const deletedCount = await this.database.cleanupOldArticles(days);
     console.log(`Cleaned up ${deletedCount} old articles`);
     return deletedCount;
   }

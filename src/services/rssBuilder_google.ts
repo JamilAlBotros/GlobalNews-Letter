@@ -289,15 +289,15 @@ async function main(): Promise<void> {
           name: saveAnswer.feedName,
           url: rssUrl,
           mode: answers.mode,
-          topic: answers.topic || undefined,
-          searchQuery: answers.searchQuery || undefined,
-          timeFrame: answers.timeFrame || undefined,
+          topic: answers.topic || '',
+          searchQuery: answers.searchQuery || '',
+          timeFrame: answers.timeFrame || '',
           country: answers.country,
           language: answers.language,
           isActive: true,
           isValidated: true,
           articleCount: articles.length,
-          lastScraped: undefined
+          lastScraped: ''
         });
 
         console.log(`\n🎉 Feed saved successfully!`);

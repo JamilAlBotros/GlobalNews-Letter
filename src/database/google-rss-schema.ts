@@ -315,7 +315,7 @@ export class GoogleRSSDatabaseManager {
   async updateLinkProcessingStage(linkId: string, stage: ArticleLink['processingStage'], errorMessage?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const updateFields = ['processingStage = ?'];
-      const values = [stage];
+      const values: any[] = [stage];
 
       if (stage === 'extracting') {
         updateFields.push('extractedAt = CURRENT_TIMESTAMP');

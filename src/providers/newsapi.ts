@@ -65,10 +65,9 @@ export class NewsAPIProvider {
    */
   async searchArticles(
     keyword: string, 
-    options: Omit<FilterOptions, 'keyword'> = {}
+    options: Omit<FilterOptions, 'keyword'> = { sortBy: 'publishedAt' }
   ): Promise<NewsAPIResponse> {
     return this.fetchArticles({
-      sortBy: 'publishedAt',
       ...options,
       keyword,
     });

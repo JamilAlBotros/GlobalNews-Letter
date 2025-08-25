@@ -118,8 +118,8 @@ export class NewsletterService {
         categories: this.extractCategories(articles),
         sources: [...new Set(articles.map(a => a.source))],
         dateRange: {
-          earliest: articles.reduce((min, a) => a.publishedAt < min ? a.publishedAt : min, articles[0]?.publishedAt)?.toISOString(),
-          latest: articles.reduce((max, a) => a.publishedAt > max ? a.publishedAt : max, articles[0]?.publishedAt)?.toISOString()
+          earliest: articles.length > 0 ? articles.reduce((min, a) => a.publishedAt < min ? a.publishedAt : min, articles[0].publishedAt).toISOString() : undefined,
+          latest: articles.length > 0 ? articles.reduce((max, a) => a.publishedAt > max ? a.publishedAt : max, articles[0].publishedAt).toISOString() : undefined
         }
       };
     }
@@ -127,8 +127,8 @@ export class NewsletterService {
     if (groupByCategory && typeof processedArticles === 'object') {
       newsletterData.articlesByCategory = {};
       for (const [category, categoryArticles] of Object.entries(processedArticles)) {
-        newsletterData.articlesByCategory[category] = categoryArticles.map(article => 
-          this.formatArticleForNewsletter(article as Article, includeImages)
+        newsletterData.articlesByCategory[category] = (categoryArticles as Article[]).map((article: Article) => 
+          this.formatArticleForNewsletter(article, includeImages)
         );
       }
     } else {
@@ -221,12 +221,12 @@ export class NewsletterService {
       if (!grouped[article.category]) {
         grouped[article.category] = [];
       }
-      grouped[article.category].push(article);
+      grouped[article.category]!.push(article);
     }
 
     // Sort articles within each category by publication date
     for (const category in grouped) {
-      grouped[category].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+      grouped[category]!.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
     }
 
     return grouped;

@@ -87,18 +87,28 @@ function parseOptions(args: string[]): CliOptions {
   
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue;
     
     if (arg.startsWith('--feed=')) {
-      options.feedId = arg.split('=')[1] || undefined;
+      const feedStr = arg.split('=')[1];
+      if (feedStr) {
+        options.feedId = feedStr;
+      }
     } else if (arg.startsWith('--interval=')) {
       const intervalStr = arg.split('=')[1];
-      options.interval = intervalStr ? parseInt(intervalStr) : undefined;
+      if (intervalStr) {
+        options.interval = parseInt(intervalStr);
+      }
     } else if (arg.startsWith('--limit=')) {
       const limitStr = arg.split('=')[1];
-      options.limit = limitStr ? parseInt(limitStr) : undefined;
+      if (limitStr) {
+        options.limit = parseInt(limitStr);
+      }
     } else if (arg.startsWith('--days=')) {
       const daysStr = arg.split('=')[1];
-      options.days = daysStr ? parseInt(daysStr) : undefined;
+      if (daysStr) {
+        options.days = parseInt(daysStr);
+      }
     } else if (arg === '--validate') {
       options.validate = true;
     } else if (arg === '--cleanup') {

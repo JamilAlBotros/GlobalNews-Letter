@@ -63,7 +63,7 @@ export class ArticleLinkScraper {
 
     if (this.intervalId) {
       clearInterval(this.intervalId);
-      this.intervalId = undefined as NodeJS.Timeout | undefined;
+      this.intervalId = undefined;
     }
 
     console.log('✅ Article scraper stopped');
@@ -110,7 +110,9 @@ export class ArticleLinkScraper {
       // Update daily stats
       const today = new Date().toISOString().split('T')[0];
       for (const feed of activeFeeds) {
-        await this.dbManager.updateProcessingStats(feed.id, today, { linksScraped: 0 }); // Will be updated per feed
+        if (feed.id) {
+          await this.dbManager.updateProcessingStats(feed.id, today, { linksScraped: 0 });
+        } // Will be updated per feed
       }
 
     } catch (error) {
@@ -135,16 +137,16 @@ export class ArticleLinkScraper {
 
       // Convert RSS articles to ArticleLink format
       const articleLinks: Omit<ArticleLink, 'scrapedAt'>[] = articles.map(article => {
-        const linkId = this.generateLinkId(feed.id, article.link);
+        const linkId = this.generateLinkId(feed.id!, article.link);
         
         return {
           id: linkId,
-          feedId: feed.id,
+          feedId: feed.id!,
           title: article.title || 'Untitled',
           link: article.link,
           pubDate: article.pubDate || new Date().toISOString(),
-          guid: article.guid,
-          description: article.contentSnippet || article.content,
+          guid: article.guid || '',
+          description: article.contentSnippet || article.content || '',
           processed: false,
           processingStage: 'pending'
         };
@@ -155,13 +157,15 @@ export class ArticleLinkScraper {
       console.log(`   ✅ Saved ${newLinksCount} new article links`);
 
       // Update feed last scraped time and article count
-      await this.dbManager.updateFeedLastScraped(feed.id, articles.length);
+      if (feed.id) {
+        await this.dbManager.updateFeedLastScraped(feed.id, articles.length);
 
-      // Update daily stats
-      const today = new Date().toISOString().split('T')[0];
-      await this.dbManager.updateProcessingStats(feed.id, today, {
-        linksScraped: newLinksCount
-      });
+        // Update daily stats
+        const today = new Date().toISOString().split('T')[0];
+        await this.dbManager.updateProcessingStats(feed.id, today, {
+          linksScraped: newLinksCount
+        });
+      }
 
       return newLinksCount;
 

@@ -167,10 +167,10 @@ export class ArticleProcessor {
         title: extraction.title || link.title,
         originalUrl: link.link,
         extractedText: extraction.text,
-        summary: summary?.summary,
+        summary: summary?.summary || '',
         wordCount: extraction.wordCount,
         extractionMethod: extraction.method,
-        summaryMethod: summary?.method,
+        summaryMethod: summary?.method || '',
         quality: extraction.quality,
         tags: JSON.stringify([]), // Will be populated later with topic extraction
         processedAt: new Date().toISOString()
@@ -183,10 +183,12 @@ export class ArticleProcessor {
       
       // Update daily stats
       const today = new Date().toISOString().split('T')[0];
-      await this.dbManager.updateProcessingStats(link.feedId, today, {
-        articlesExtracted: 1,
-        articlesSummarized: summary ? 1 : 0
-      });
+      if (link.feedId) {
+        await this.dbManager.updateProcessingStats(link.feedId, today, {
+          articlesExtracted: 1,
+          articlesSummarized: summary ? 1 : 0
+        });
+      }
 
       console.log(`   ✅ Completed (${extraction.wordCount} words, ${extraction.quality} quality)`);
 
@@ -208,8 +210,7 @@ export class ArticleProcessor {
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        },
-        timeout: 30000 // 30 second timeout
+        }
       });
 
       if (!response.ok) {
@@ -265,7 +266,7 @@ export class ArticleProcessor {
   private extractTextFromHTML(html: string): { text: string; title: string; wordCount: number } {
     // Extract title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : '';
+    const title = titleMatch?.[1]?.trim() || '';
 
     // Remove script and style tags
     let cleanHtml = html.replace(/<script[^>]*>.*?<\/script>/gis, '');

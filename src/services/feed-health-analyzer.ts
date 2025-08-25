@@ -1,5 +1,5 @@
 import sqlite3 from 'sqlite3';
-import {
+import type {
   FeedHealthDashboard,
   VolumeMetrics,
   QualityMetrics,
@@ -173,8 +173,12 @@ export class FeedHealthAnalyzer {
     const sortedArticles = articles.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     let totalGap = 0;
     for (let i = 1; i < sortedArticles.length; i++) {
-      const gap = new Date(sortedArticles[i].createdAt).getTime() - new Date(sortedArticles[i-1].createdAt).getTime();
-      totalGap += gap;
+      const current = sortedArticles[i];
+      const previous = sortedArticles[i-1];
+      if (current && previous) {
+        const gap = new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime();
+        totalGap += gap;
+      }
     }
     const averageFrequency = sortedArticles.length > 1 ? totalGap / (sortedArticles.length - 1) / (60 * 1000) : 0;
 
@@ -222,11 +226,14 @@ export class FeedHealthAnalyzer {
 
     articles.forEach(article => {
       const date = new Date(article.createdAt);
-      hourCounts[date.getHours()]++;
+      const hour = date.getHours();
+      if (hourCounts[hour] !== undefined) {
+        hourCounts[hour]++;
+      }
       
       const timestamp = article.createdAt;
       timestampCounts[timestamp] = (timestampCounts[timestamp] || 0) + 1;
-      if (timestampCounts[timestamp] > 1) {
+      if (timestampCounts[timestamp]! > 1) {
         identicalTimestamps++;
       }
     });
@@ -247,8 +254,12 @@ export class FeedHealthAnalyzer {
     // Calculate average gap between articles
     const sortedArticles = articles.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     for (let i = 1; i < sortedArticles.length; i++) {
-      const gap = new Date(sortedArticles[i].createdAt).getTime() - new Date(sortedArticles[i-1].createdAt).getTime();
-      gaps.push(gap / (60 * 1000)); // Convert to minutes
+      const current = sortedArticles[i];
+      const previous = sortedArticles[i-1];
+      if (current && previous) {
+        const gap = new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime();
+        gaps.push(gap / (60 * 1000)); // Convert to minutes
+      }
     }
     const averageGapMinutes = gaps.length > 0 ? gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length : 0;
 
@@ -600,9 +611,13 @@ export class FeedHealthAnalyzer {
     const sortedArticles = articles.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     let batchCount = 0;
     for (let i = 1; i < sortedArticles.length; i++) {
-      const timeDiff = new Date(sortedArticles[i].createdAt).getTime() - new Date(sortedArticles[i-1].createdAt).getTime();
-      if (timeDiff < 5 * 60 * 1000) { // 5 minutes
-        batchCount++;
+      const current = sortedArticles[i];
+      const previous = sortedArticles[i-1];
+      if (current && previous) {
+        const timeDiff = new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime();
+        if (timeDiff < 5 * 60 * 1000) { // 5 minutes
+          batchCount++;
+        }
       }
     }
     const batchPublishing = (batchCount / articles.length) * 100;
@@ -696,8 +711,8 @@ export class FeedHealthAnalyzer {
       httpStatus: Math.random() > 0.05 ? 200 : 404,
       success: Math.random() > 0.05,
       timestamp: article.createdAt,
-      error: Math.random() > 0.95 ? 'Connection timeout' : undefined
-    }));
+      error: Math.random() > 0.95 ? 'Connection timeout' : ''
+    }) as FeedTechnicalData);
   }
 
   private findDuplicateContent(articles: ArticleHealthData[]): ArticleHealthData[] {

@@ -6,6 +6,9 @@
  */
 
 import inquirer from 'inquirer';
+import { RSSProvider } from '../providers/rss.js';
+import { GoogleRSSDatabaseManager } from '../database/google-rss-schema.js';
+import crypto from 'crypto';
 
 // Type definitions
 interface Topics {
@@ -31,6 +34,8 @@ interface UserAnswers {
   timeFrame?: string;
   country: string;
   language: string;
+  shouldSave?: boolean;
+  feedName?: string;
 }
 
 // Predefined topics with their Google News topic IDs
@@ -102,8 +107,14 @@ function generateSearchRSSUrl(query: string, timeFrame: string, countryCode: str
  * Main function
  */
 async function main(): Promise<void> {
+  const rssProvider = new RSSProvider();
+  const dbManager = new GoogleRSSDatabaseManager();
+  
   try {
     console.log('\n🌍 Google News RSS URL Generator\n');
+    
+    // Initialize database
+    await dbManager.initialize();
 
     // First, ask for the mode
     const modeAnswer = await inquirer.prompt<{ mode: 'topic' | 'search' }>([
@@ -218,12 +229,100 @@ async function main(): Promise<void> {
     console.log(`🌍 Country: ${answers.country}`);
     console.log(`🗣️  Language: ${answers.language}\n`);
 
-    console.log('💡 You can now test this URL with:');
-    console.log(`   npm run rss-test "${rssUrl}"`);
+    // Test the RSS feed
+    console.log('🧪 Testing RSS feed...');
+    try {
+      const validation = await rssProvider.validateFeedUrl(rssUrl);
+      
+      if (!validation.isValid) {
+        console.error(`❌ RSS feed validation failed: ${validation.error}`);
+        console.log('💡 The URL was generated correctly, but the feed may not be accessible or valid.');
+        return;
+      }
+
+      console.log('✅ RSS feed is valid!');
+      
+      // Fetch a sample to show article count
+      const { articles, metadata } = await rssProvider.fetchFeed(rssUrl);
+      console.log(`📰 Found ${articles.length} articles in feed`);
+      console.log(`📋 Feed title: ${metadata.title || 'N/A'}`);
+      
+      if (articles.length > 0) {
+        console.log('\n📄 Sample articles:');
+        articles.slice(0, 3).forEach((article, index) => {
+          console.log(`${index + 1}. ${article.title}`);
+          console.log(`   📎 ${article.link}\n`);
+        });
+      }
+
+      // Ask if user wants to save to database
+      const saveAnswer = await inquirer.prompt<{ shouldSave: boolean; feedName?: string }>([
+        {
+          type: 'confirm',
+          name: 'shouldSave',
+          message: 'Would you like to save this feed to the database for article processing?',
+          default: true
+        },
+        {
+          type: 'input',
+          name: 'feedName',
+          message: 'Enter a name for this feed:',
+          when: (answers) => answers.shouldSave,
+          default: () => {
+            if (answers.mode === 'search') {
+              return `${answers.searchQuery} (${answers.country})`;
+            } else {
+              return `${answers.topic} - ${answers.country}`;
+            }
+          },
+          validate: (input: string) => input.trim().length > 0 || 'Feed name cannot be empty'
+        }
+      ]);
+
+      if (saveAnswer.shouldSave && saveAnswer.feedName) {
+        // Generate feed ID
+        const feedId = crypto.createHash('md5').update(rssUrl).digest('hex').substring(0, 12);
+        
+        // Save to database
+        await dbManager.saveFeed({
+          id: feedId,
+          name: saveAnswer.feedName,
+          url: rssUrl,
+          mode: answers.mode,
+          topic: answers.topic || undefined,
+          searchQuery: answers.searchQuery || undefined,
+          timeFrame: answers.timeFrame || undefined,
+          country: answers.country,
+          language: answers.language,
+          isActive: true,
+          isValidated: true,
+          articleCount: articles.length,
+          lastScraped: undefined
+        });
+
+        console.log(`\n🎉 Feed saved successfully!`);
+        console.log(`📝 Feed ID: ${feedId}`);
+        console.log(`📊 Initial article count: ${articles.length}`);
+        console.log(`\n💡 Next steps:`);
+        console.log(`   1. Start the article link scraper: npm run scraper start`);
+        console.log(`   2. Process article content: npm run process articles`);
+        console.log(`   3. View processing status: npm run process status`);
+      } else {
+        console.log('\n💡 Feed not saved. You can test this URL manually with:');
+        console.log(`   npm run rss-test "${rssUrl}"`);
+      }
+      
+    } catch (testError) {
+      console.error('❌ Error testing RSS feed:', testError instanceof Error ? testError.message : testError);
+      console.log('💡 The URL was generated, but testing failed. You can try manually:');
+      console.log(`   npm run rss-test "${rssUrl}"`);
+    }
 
   } catch (error) {
-    console.error('❌ Error generating RSS URL:', error instanceof Error ? error.message : error);
+    console.error('❌ Error:', error instanceof Error ? error.message : error);
     process.exit(1);
+  } finally {
+    await dbManager.close();
   }
 }
 

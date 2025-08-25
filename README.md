@@ -165,18 +165,93 @@ Generated newsletters are saved as JSON files with this structure:
 
 ## 🛠️ Development
 
-### Scripts
+### Available Commands
+
+| Category | Command | Purpose | Options/Arguments |
+|----------|---------|---------|-------------------|
+| **📰 Article Management** | | | |
+| | `npm run fetch` | Interactive CLI for fetching articles from NewsAPI | Categories: Finance/Tech, Search keywords, Top headlines |
+| | `npm run generate` | Interactive newsletter generation CLI | Language selection, Article filtering, JSON export |
+| **🔍 RSS Feed Tools** | | | |
+| | `npm run rss-test <url>` | Test and validate RSS feed URLs | RSS URL as argument |
+| | `npm run google-rss` | Generate Google News RSS URLs | Interactive: country, language, topics/search |
+| | `npm run poll [command]` | RSS feed polling and monitoring | `start`, `status`, `recent [N]`, `test` |
+| **🏥 Feed Health Monitoring** | | | |
+| | `npm run health check <feed-id>` | Comprehensive health analysis of a feed | `--detailed`, `--format=json\|table` |
+| | `npm run health summary` | Health overview of all feeds | `--format=json\|table\|summary` |
+| | `npm run health dashboard` | Live health monitoring dashboard | Real-time feed status |
+| | `npm run health alerts` | Show active health alerts | `--severity=info\|warning\|error\|critical` |
+| | `npm run health resolve <alert-id>` | Resolve specific health alert | Alert ID as argument |
+| | `npm run health volume <feed-id>` | Analyze volume metrics for feed | `--days=N` for historical range |
+| | `npm run health quality <feed-id>` | Analyze content quality metrics | Content completeness, readability |
+| | `npm run health credibility <feed-id>` | Analyze feed credibility and authenticity | Author patterns, suspicious content |
+| | `npm run health technical <feed-id>` | Technical performance analysis | Uptime, response times, errors |
+| | `npm run health ranking` | Rank feeds by health score | Shows top and bottom performers |
+| | `npm run health outliers` | Find feeds with unusual patterns | Statistical anomaly detection |
+| | `npm run health monitor` | Start continuous health monitoring | Background monitoring with alerts |
+| | `npm run health report` | Generate comprehensive health report | `--days=N` for report period |
+| **🔧 Development Tools** | | | |
+| | `npm run dev` | Development mode with file watching | Hot reload for development |
+| | `npm run build` | Build TypeScript to JavaScript | Production build |
+| | `npm run start` | Run compiled JavaScript application | Production start |
+| | `npm run lint` | Run ESLint code quality checks | Code style and quality |
+| | `npm run typecheck` | TypeScript type checking | Type validation without build |
+| | `npm run test` | Run test suite | Unit and integration tests |
+
+### RSS Polling Commands Detail
+
+The `npm run poll` command supports multiple sub-commands:
 
 ```bash
-npm run dev          # Development mode with watch
-npm run build        # Build TypeScript
-npm run start        # Run built application
-npm run lint         # ESLint
-npm run typecheck    # TypeScript checking
-npm run test         # Run tests
-npm run fetch        # Article fetching CLI
-npm run generate     # Newsletter generation CLI
+npm run poll                    # Start continuous RSS polling (default)
+npm run poll start             # Same as above - start polling service
+npm run poll status            # Show current polling status and database info
+npm run poll recent [N]        # Show N most recent articles (default: 10)
+npm run poll test              # Test RSS feed connection without polling
 ```
+
+### Health Monitoring Commands Detail
+
+The `npm run health` command provides comprehensive feed health analysis:
+
+#### Core Health Commands
+```bash
+npm run health check us-tech-news              # Full health analysis
+npm run health summary --format=json           # JSON summary of all feeds
+npm run health dashboard                        # Interactive dashboard
+```
+
+#### Alert Management
+```bash
+npm run health alerts --severity=critical      # Show only critical alerts
+npm run health resolve alert-12345            # Resolve specific alert
+```
+
+#### Specific Metric Analysis
+```bash
+npm run health volume us-tech --days=30       # 30-day volume analysis
+npm run health quality finance-feed           # Content quality assessment
+npm run health credibility news-source        # Authenticity analysis
+npm run health technical rss-feed-1           # Performance metrics
+```
+
+#### Analysis & Reporting
+```bash
+npm run health ranking                         # Rank all feeds by health
+npm run health outliers                        # Find statistically unusual feeds
+npm run health report --days=14               # 14-day comprehensive report
+npm run health monitor                         # Start continuous monitoring
+```
+
+### Configuration Options
+
+Many commands accept additional options:
+
+- `--format=table|json|summary` - Output format selection
+- `--days=N` - Historical data range (default: 7)
+- `--severity=level` - Filter alerts by severity level
+- `--detailed` - Show additional detailed metrics
+- `--resolve` - Auto-resolve alerts after displaying
 
 ### Architecture
 

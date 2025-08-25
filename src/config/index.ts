@@ -59,7 +59,11 @@ export const CATEGORY_QUERIES = {
 export const NEWS_API_LANGUAGES = {
   english: 'en',
   spanish: 'es',
-  arabic: 'ar'
+  arabic: 'ar',
+  portuguese: 'pt',
+  french: 'fr',
+  chinese: 'zh', 
+  japanese: 'en' // NewsAPI doesn't have Japanese, fallback to English
 } as const;
 
 // Popular tech and finance sources

@@ -24,26 +24,4 @@ https://www.yahoo.com/news/rss
 
 https://www.clarin.com/rss/lo-ultimo
 
-https://borainvestir.b3.com.br/noticias/feed/
-
-
-
-
-
-
-
-
-
-
-. Specialized Aggregators
-
-Google News RSS: You can generate RSS feeds for any country/language by modifying the URL:
-
-https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr
-
-
-hl = language
-
-gl = country
-
-ceid = country:language code
+https://borainvestir.b3.com.br/noticias/feed/ 

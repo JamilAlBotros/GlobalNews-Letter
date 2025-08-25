@@ -30,7 +30,7 @@ const CONFIG = {
   enableLanguageDetection: true,
   
   // Admin notification email (optional)
-  adminNotificationEmail: process.env.ADMIN_EMAIL
+  adminNotificationEmail: process.env.ADMIN_EMAIL || undefined
 };
 
 let poller: RSSPoller | null = null;
@@ -46,7 +46,7 @@ async function main() {
 
   try {
     poller = new RSSPoller(CONFIG);
-    await poller.initialize();
+    await poller!.initialize();
 
     switch (command) {
       case 'start':

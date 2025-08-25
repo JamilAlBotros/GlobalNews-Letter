@@ -488,7 +488,7 @@ export class RSSPoller {
             title: article.title,
             link: article.link,
             content: extractedContent,
-            author: article.author || article.creator || '',
+            author: article.author || (article as any).creator || '',
             pubDate: article.pubDate || new Date().toISOString(),
             createdAt: new Date().toISOString(),
             
@@ -500,28 +500,28 @@ export class RSSPoller {
             category: feed.category || 'general',
             
             // RSS metadata fields
-            guid: article.guid || undefined,
-            description: article.description || undefined,
-            contentSnippet: article.contentSnippet || undefined,
-            isoDate: article.isoDate || undefined,
-            creator: article.creator || undefined,
-            summary: article.summary || undefined,
+            guid: article.guid,
+            description: (article as any).description,
+            contentSnippet: article.contentSnippet,
+            isoDate: (article as any).isoDate,
+            creator: (article as any).creator,
+            summary: (article as any).summary,
             
             // Media and enclosures
             enclosureUrl: article.enclosure?.url || undefined,
             enclosureType: article.enclosure?.type || undefined,
-            enclosureLength: article.enclosure?.length || undefined,
+            enclosureLength: (article.enclosure as any)?.length,
             
             // Categories and tags
             categories: article.categories ? JSON.stringify(article.categories) : undefined,
             
             // Source metadata
-            source: article.source || undefined,
-            sourceUrl: article.link || undefined,
+            source: (article as any).source,
+            sourceUrl: article.link,
             
             // Publication metadata
-            published: article.pubDate || article.isoDate || undefined,
-            updated: article.updated || undefined,
+            published: article.pubDate || (article as any).isoDate,
+            updated: (article as any).updated,
             
             // Language detection results
             detectedLanguage,
@@ -863,8 +863,7 @@ export class RSSPoller {
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 10000
+        }
       });
 
       if (!response.ok) {

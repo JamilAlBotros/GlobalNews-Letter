@@ -150,21 +150,21 @@ export class LanguageDetectionService {
         if (urlHint) {
           return { language: urlHint, confidence: 0.8 }; // Higher confidence for URL detection
         }
-        return keywordResult; // Might be null, that's ok
+        return keywordResult || null; // Ensure it's null if undefined
       }
 
       // Map Franc language codes to our supported languages
       const francToSupported = this.mapFrancCodeToSupported(detectedCode);
       if (!francToSupported) {
         // If Franc detected unsupported language, try keyword result
-        return keywordResult;
+        return keywordResult || null;
       }
 
       // Calculate confidence based on text length and detection certainty
       const confidence = this.calculateConfidence(combinedText.length, detectedCode);
       
       if (confidence < this.confidenceThreshold) {
-        return keywordResult; // Fall back to keyword detection
+        return keywordResult || null; // Fall back to keyword detection
       }
 
       return {

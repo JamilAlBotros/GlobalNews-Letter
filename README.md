@@ -195,7 +195,7 @@ Generated newsletters are saved as JSON files with this structure:
 | | `npm run build` | Build TypeScript to JavaScript | Production build |
 | | `npm run start` | Run compiled JavaScript application | Production start |
 | | `npm run lint` | Run ESLint code quality checks | Code style and quality |
-| | `npm run typecheck` | TypeScript type checking | Type validation without build |
+| | `npm run typecheck` | TypeScript type checking | Type validation without |
 | | `npm run test` | Run test suite | Unit and integration tests |
 
 ### RSS Polling Commands Detail

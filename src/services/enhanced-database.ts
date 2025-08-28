@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import { EnhancedRSSDatabaseManager } from '../database/enhanced-rss-schema.js';
-import { 
+import type { 
   FeedSource,
   FeedInstance,
   ArticleOriginal,

@@ -1,7 +1,55 @@
 import { z } from 'zod';
 
-// Import schemas from the backend
-export * from '../../../src/api/schemas/enhanced-schemas';
+// Frontend API schemas (simplified versions of backend schemas)
+export const FeedSource = z.object({
+  id: z.string(),
+  name: z.string(),
+  base_url: z.string(),
+  provider_type: z.enum(['rss', 'google_rss', 'api', 'scraper']),
+  source_language: z.enum(['en', 'es', 'ar', 'pt', 'fr', 'zh', 'ja']),
+  primary_region: z.string().optional(),
+  content_category: z.enum(['finance', 'tech', 'health', 'general']),
+  content_type: z.enum(['breaking', 'analysis', 'daily', 'weekly']),
+  is_active: z.boolean(),
+  quality_score: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const FeedInstance = z.object({
+  id: z.string(),
+  source_id: z.string(),
+  instance_name: z.string(),
+  feed_url: z.string(),
+  refresh_tier: z.enum(['realtime', 'frequent', 'standard', 'slow']),
+  base_refresh_minutes: z.number(),
+  is_active: z.boolean(),
+  reliability_score: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const ArticleOriginal = z.object({
+  id: z.string(),
+  feed_instance_id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  author: z.string().optional(),
+  source_url: z.string(),
+  published_at: z.string(),
+  detected_language: z.string(),
+  content_category: z.string().optional(),
+  urgency_level: z.enum(['breaking', 'high', 'normal', 'low']).optional(),
+  processing_stage: z.enum(['pending', 'processed', 'translated', 'published', 'failed']),
+  is_selected: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type FeedSourceType = z.infer<typeof FeedSource>;
+export type FeedInstanceType = z.infer<typeof FeedInstance>;
+export type ArticleOriginalType = z.infer<typeof ArticleOriginal>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
 

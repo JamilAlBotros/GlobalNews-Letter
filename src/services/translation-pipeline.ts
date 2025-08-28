@@ -1,6 +1,6 @@
 import { EnhancedDatabaseService } from './enhanced-database.js';
 import { LLMService } from './llm.js';
-import { 
+import type { 
   ArticleOriginal, 
   ArticleTranslation, 
   TranslationJob, 

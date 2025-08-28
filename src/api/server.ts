@@ -9,6 +9,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createProblemDetails, HealthCheckResponseSchema, ReadinessCheckResponseSchema } from './schemas/common-schemas.js';
 import { DatabaseService } from '../services/database.js';
 import { RSSPoller } from '../services/rss-poller.js';
+import enhancedFeedsRoutes from './routes/enhanced-feeds.js';
 
 /**
  * GlobalNews Letter API Server
@@ -195,6 +196,9 @@ export class ApiServer {
     this.registerPollingRoutes();
     this.registerArticleRoutes();
     this.registerHealthRoutes();
+    
+    // Register enhanced routes
+    this.fastify.register(enhancedFeedsRoutes, { prefix: '/api/enhanced' });
   }
 
   /**

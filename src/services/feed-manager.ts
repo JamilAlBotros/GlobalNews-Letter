@@ -1,6 +1,6 @@
 import { EnhancedDatabaseService } from './enhanced-database.js';
 import { LanguageDetectionService } from './language-detection.js';
-import { 
+import type { 
   FeedInstance, 
   FeedSource, 
   ArticleOriginal, 

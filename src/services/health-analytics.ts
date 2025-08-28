@@ -1,4 +1,6 @@
 import { EnhancedDatabaseService } from './enhanced-database.js';
+import { healthConfig } from '../config/environment.js';
+import { ErrorHandler } from '../utils/errors.js';
 import type { 
   FeedInstance, 
   FeedSource, 

@@ -344,25 +344,41 @@ export class EnhancedRSSDatabaseManager {
   }
 
   private createIndexes(): void {
-    // Feed Management
+    // Feed Management - optimized for refresh scheduling and health monitoring
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_instances_active_tier ON feed_instances(is_active, refresh_tier)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_instances_refresh_schedule ON feed_instances(refresh_tier, last_fetched) WHERE is_active = 1`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_instances_reliability ON feed_instances(reliability_score DESC, consecutive_failures)`);
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_sources_language_category ON feed_sources(source_language, content_category)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_sources_active_quality ON feed_sources(is_active, quality_score DESC)`);
 
-    // Articles
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_feed_published ON articles_original(feed_instance_id, published_at)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_language_quality ON articles_original(detected_language, content_quality)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_processing_stage ON articles_original(processing_stage)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_urgency ON articles_original(urgency_level, published_at)`);
+    // Articles - optimized for content processing and duplicate detection
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_feed_published ON articles_original(feed_instance_id, published_at DESC)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_language_quality ON articles_original(detected_language, content_quality, published_at DESC)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_processing_stage ON articles_original(processing_stage, created_at DESC)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_urgency ON articles_original(urgency_level, published_at DESC)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_source_url ON articles_original(source_url)`); // For duplicate checking
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_original_translation_ready ON articles_original(processing_stage, content_quality) WHERE processing_stage IN ('processed', 'pending')`);
 
-    // Translations
+    // Translations - optimized for quality filtering and publishing
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_translations_original_lang ON articles_translations(original_article_id, target_language)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_translations_status ON articles_translations(translation_status)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_translations_quality ON articles_translations(translation_quality_score)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_translations_status ON articles_translations(translation_status, created_at DESC)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_translations_quality ON articles_translations(translation_quality_score DESC, target_language)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_articles_translations_publishing ON articles_translations(target_language, translation_status, translation_quality_score DESC) WHERE translation_status = 'completed'`);
 
-    // Health & Jobs
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_health_metrics_feed_timestamp ON feed_health_metrics(feed_instance_id, check_timestamp)`);
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_translation_jobs_status_priority ON translation_jobs(status, priority)`);
+    // Health & Jobs - optimized for monitoring and queue processing
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_health_metrics_feed_timestamp ON feed_health_metrics(feed_instance_id, check_timestamp DESC)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_feed_health_metrics_availability ON feed_health_metrics(check_timestamp DESC, is_available)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_translation_jobs_status_priority ON translation_jobs(status, priority DESC, created_at ASC)`);
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_translation_jobs_article ON translation_jobs(original_article_id)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_translation_jobs_processing ON translation_jobs(status, retry_count, created_at ASC) WHERE status IN ('pending', 'processing')`);
+    
+    // Performance optimization for WAL mode and concurrent access
+    this.db.run(`PRAGMA journal_mode = WAL`);
+    this.db.run(`PRAGMA synchronous = NORMAL`);
+    this.db.run(`PRAGMA cache_size = -64000`); // 64MB cache
+    this.db.run(`PRAGMA foreign_keys = ON`);
+    this.db.run(`PRAGMA temp_store = MEMORY`);
+    this.db.run(`PRAGMA mmap_size = 268435456`); // 256MB mmap
   }
 
   private createViews(): void {

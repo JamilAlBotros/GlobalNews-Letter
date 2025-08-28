@@ -19,9 +19,8 @@ import { EnhancedDatabaseService } from '../../services/enhanced-database.js';
 import { FeedManager } from '../../services/feed-manager.js';
 import { TranslationPipeline } from '../../services/translation-pipeline.js';
 import { HealthAnalyticsService } from '../../services/health-analytics.js';
-import { LanguageDetectionService } from '../../services/language-detection.js';
-import { LLMService } from '../../services/llm.js';
-import { RSSService } from '../../services/rss.js';
+import { LLMService } from '../../services/llm-service.js';
+import { RSSProcessor } from '../../services/rss-processor.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -32,10 +31,8 @@ import { v4 as uuidv4 } from 'uuid';
 const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
   // Initialize services
   const db = new EnhancedDatabaseService();
-  const languageDetection = new LanguageDetectionService();
-  const rssService = new RSSService();
   const llmService = new LLMService();
-  const feedManager = new FeedManager(db, languageDetection, rssService);
+  const rssProcessor = new RSSProcessor(db, llmService);
   const translationPipeline = new TranslationPipeline(db, llmService);
   const healthAnalytics = new HealthAnalyticsService(db);
 
@@ -391,7 +388,7 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
   }, async (request, reply) => {
     const { tier = 'standard', concurrency = 3 } = request.body as any;
     
-    const result = await feedManager.processFeedsByTier(tier, concurrency);
+    const result = await rssProcessor.processFeedsByTier(tier, concurrency);
     return result;
   });
 

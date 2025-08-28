@@ -10,6 +10,10 @@ import { createProblemDetails, HealthCheckResponseSchema, ReadinessCheckResponse
 import { env, securityConfig, isDevelopment } from '../config/environment.js';
 import { AuthService } from '../services/auth-service.js';
 import { EnhancedDatabaseService } from '../services/enhanced-database.js';
+import { LLMService } from '../services/llm-service.js';
+import { RSSProcessor } from '../services/rss-processor.js';
+import { TranslationPipeline } from '../services/translation-pipeline.js';
+import { HealthMonitor } from '../services/health-monitor.js';
 import { RSSPoller } from '../services/rss-poller.js';
 import enhancedFeedsRoutes from './routes/enhanced-feeds.js';
 
@@ -42,6 +46,10 @@ export class ApiServer {
   private config: ServerConfig;
   private database: EnhancedDatabaseService;
   private authService: AuthService;
+  private llmService: LLMService;
+  private rssProcessor: RSSProcessor;
+  private translationPipeline: TranslationPipeline;
+  private healthMonitor: HealthMonitor;
   private rssPoller?: RSSPoller;
   private startTime: number;
 
@@ -50,6 +58,16 @@ export class ApiServer {
     this.startTime = Date.now();
     this.database = new EnhancedDatabaseService();
     this.authService = new AuthService();
+    this.llmService = new LLMService();
+    this.rssProcessor = new RSSProcessor(this.database, this.llmService);
+    this.translationPipeline = new TranslationPipeline(this.database, this.llmService);
+    this.healthMonitor = new HealthMonitor(
+      this.database,
+      this.llmService,
+      this.rssProcessor,
+      this.translationPipeline,
+      this.authService
+    );
     
     // Initialize Fastify with logging
     this.fastify = Fastify({
@@ -152,11 +170,12 @@ export class ApiServer {
       }
     });
 
-    // Structured logging
+    // Structured logging with verbose health monitoring
     this.fastify.addHook('onResponse', async (request, reply) => {
       const duration = performance.now() - (request as any).startTime;
       
-      this.fastify.log.info({
+      // Enhanced logging with health monitoring context
+      const logData = {
         requestId: (request as any).requestId,
         method: request.method,
         url: request.url,
@@ -164,8 +183,32 @@ export class ApiServer {
         responseTime: Math.round(duration),
         userAgent: request.headers['user-agent'],
         ip: request.ip,
-        userId: (request as any).user?.sub
-      }, 'Request completed');
+        userId: (request as any).user?.sub,
+        timestamp: new Date().toISOString(),
+        // Add health context for monitoring
+        isHealthEndpoint: request.url.includes('/health'),
+        isSlowRequest: duration > 1000,
+        isErrorStatus: reply.statusCode >= 400
+      };
+
+      // Log performance warnings
+      if (duration > 2000) {
+        this.fastify.log.warn(logData, `Slow request detected: ${Math.round(duration)}ms`);
+      } else if (duration > 1000) {
+        this.fastify.log.info(logData, `Request completed (slow): ${Math.round(duration)}ms`);
+      } else {
+        this.fastify.log.info(logData, 'Request completed');
+      }
+
+      // Log health monitoring metrics periodically
+      if (request.url.includes('/health') || request.url.includes('/readyz')) {
+        this.fastify.log.info({
+          ...logData,
+          healthCheck: true,
+          uptime: Date.now() - this.startTime,
+          memoryUsage: process.memoryUsage()
+        }, 'Health check performed');
+      }
     });
   }
 
@@ -408,9 +451,24 @@ export class ApiServer {
    */
   async start(): Promise<void> {
     try {
-      // Initialize database
-      await this.database.initialize();
+      this.fastify.log.info('Starting GlobalNews Letter API server...');
       
+      // Initialize database with verbose logging
+      this.fastify.log.info('Initializing database connection...');
+      await this.database.initialize();
+      this.fastify.log.info('Database initialized successfully');
+      
+      // Start health monitoring
+      this.fastify.log.info('Starting health monitoring system...');
+      const healthStatus = await this.healthMonitor.getSystemHealth();
+      this.fastify.log.info({
+        overallStatus: healthStatus.overall_status,
+        activeComponents: Object.keys(healthStatus.components),
+        uptime: healthStatus.metrics.system_uptime
+      }, 'Health monitoring initialized');
+      
+      // Start server
+      this.fastify.log.info(`Starting server on ${this.config.host}:${this.config.port}...`);
       await this.fastify.listen({ 
         port: this.config.port, 
         host: this.config.host 
@@ -420,11 +478,22 @@ export class ApiServer {
         port: this.config.port,
         host: this.config.host,
         environment: this.config.environment,
-        version: this.config.version
+        version: this.config.version,
+        pid: process.pid,
+        nodeVersion: process.version,
+        memoryUsage: process.memoryUsage(),
+        startTime: new Date().toISOString()
       }, 'Server started successfully');
       
+      // Log periodic health updates
+      this.scheduleHealthLogging();
+      
     } catch (error) {
-      this.fastify.log.error('Failed to start server:', error);
+      this.fastify.log.error({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      }, 'Failed to start server');
       process.exit(1);
     }
   }
@@ -441,6 +510,42 @@ export class ApiServer {
    */
   setRSSPoller(poller: RSSPoller): void {
     this.rssPoller = poller;
+    this.fastify.log.info('RSS poller attached to server');
+  }
+
+  /**
+   * Schedule periodic health logging
+   */
+  private scheduleHealthLogging(): void {
+    // Log health status every 5 minutes
+    setInterval(async () => {
+      try {
+        const healthStatus = await this.healthMonitor.getSystemHealth();
+        this.fastify.log.info({
+          overallStatus: healthStatus.overall_status,
+          components: Object.fromEntries(
+            Object.entries(healthStatus.components).map(([key, comp]) => [
+              key, 
+              { status: comp.status, responseTime: comp.response_time }
+            ])
+          ),
+          metrics: {
+            uptime: healthStatus.metrics.system_uptime,
+            memoryUsage: healthStatus.metrics.memory_usage,
+            activeFeeds: healthStatus.metrics.active_feeds,
+            totalArticles: healthStatus.metrics.total_articles
+          },
+          alertCount: healthStatus.alerts.length
+        }, 'Periodic health check');
+      } catch (error) {
+        this.fastify.log.error({
+          error: error instanceof Error ? error.message : 'Unknown error',
+          operation: 'periodicHealthCheck'
+        }, 'Failed to perform periodic health check');
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    this.fastify.log.info('Scheduled periodic health logging every 5 minutes');
   }
 }
 

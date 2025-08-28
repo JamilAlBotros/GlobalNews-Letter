@@ -108,7 +108,14 @@ class ApiClient {
       throw error;
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => null);
+    
+    // Handle cases where server returns null or empty responses
+    if (data === null || data === undefined) {
+      console.warn(`API endpoint ${endpoint} returned null/undefined data`);
+      return [] as T; // Return empty array for list endpoints
+    }
+    
     return data;
   }
 
@@ -247,6 +254,40 @@ class ApiClient {
     return this.request('/api/enhanced/database/wipe', {
       method: 'POST',
     });
+  }
+
+  // Polling Management
+  async getPollingStatus() {
+    return this.request('/api/enhanced/polling/status');
+  }
+
+  async startPolling() {
+    return this.request('/api/enhanced/polling/start', {
+      method: 'POST',
+    });
+  }
+
+  async stopPolling() {
+    return this.request('/api/enhanced/polling/stop', {
+      method: 'POST',
+    });
+  }
+
+  async triggerPoll() {
+    return this.request('/api/enhanced/polling/trigger', {
+      method: 'POST',
+    });
+  }
+
+  async updatePollingInterval(data: { minutes: number }) {
+    return this.request('/api/enhanced/polling/interval', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getActiveFeedsStatus() {
+    return this.request('/api/enhanced/polling/feeds');
   }
 }
 

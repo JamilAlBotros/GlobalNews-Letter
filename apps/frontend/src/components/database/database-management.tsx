@@ -50,32 +50,7 @@ export function DatabaseManagement() {
     },
   });
 
-  // Mock data for development
-  const mockBackups = [
-    {
-      filename: 'backup_2024-01-15_14-30-00.db',
-      size: 2457600, // bytes
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      compressed: false,
-      type: 'manual',
-    },
-    {
-      filename: 'backup_2024-01-15_12-00-00.db.gz',
-      size: 1228800,
-      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      compressed: true,
-      type: 'automatic',
-    },
-    {
-      filename: 'backup_2024-01-14_18-45-00.db',
-      size: 2201344,
-      created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      compressed: false,
-      type: 'manual',
-    },
-  ];
-
-  const backupsData = backups || mockBackups;
+  const backupsData = backups || [];
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['B', 'KB', 'MB', 'GB'];

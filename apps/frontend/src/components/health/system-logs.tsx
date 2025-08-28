@@ -6,61 +6,12 @@ import { AlertTriangle, Info, XCircle, CheckCircle, Clock } from 'lucide-react';
 export function SystemLogs() {
   const [selectedLevel, setSelectedLevel] = useState('all');
 
-  // Mock log data
-  const mockLogs = [
-    {
-      id: '1',
-      timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      level: 'info',
-      component: 'feed-processor',
-      message: 'Successfully processed Reuters Business News feed',
-      details: '15 articles fetched and processed',
-    },
-    {
-      id: '2',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      level: 'warning',
-      component: 'translation-pipeline',
-      message: 'Translation queue is getting large',
-      details: 'Current queue size: 23 jobs',
-    },
-    {
-      id: '3',
-      timestamp: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-      level: 'info',
-      component: 'health-monitor',
-      message: 'Health check completed',
-      details: 'All core systems operational',
-    },
-    {
-      id: '4',
-      timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-      level: 'error',
-      component: 'feed-processor',
-      message: 'Failed to fetch El País Health feed',
-      details: 'Connection timeout after 30s, will retry in 30m',
-    },
-    {
-      id: '5',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      level: 'info',
-      component: 'database',
-      message: 'Database backup created successfully',
-      details: 'Backup size: 2.3MB, location: /data/backups/',
-    },
-    {
-      id: '6',
-      timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-      level: 'warning',
-      component: 'article-processor',
-      message: 'Low confidence language detection',
-      details: 'Article ID: art-456, detected: Portuguese (confidence: 0.62)',
-    },
-  ];
-
+  // TODO: Connect to actual logging service
+  const logs: any[] = [];
+  
   const filteredLogs = selectedLevel === 'all' 
-    ? mockLogs 
-    : mockLogs.filter(log => log.level === selectedLevel);
+    ? logs 
+    : logs.filter((log: any) => log.level === selectedLevel);
 
   const getLevelIcon = (level: string) => {
     switch (level) {

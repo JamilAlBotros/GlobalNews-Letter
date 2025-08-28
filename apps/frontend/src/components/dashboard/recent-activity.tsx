@@ -5,63 +5,8 @@ import { apiClient } from '@/lib/api';
 import { Clock, Globe, FileText, Languages } from 'lucide-react';
 
 export function RecentActivity() {
-  // Mock recent activity data
-  const mockActivity = [
-    {
-      id: '1',
-      type: 'feed_fetch',
-      icon: Globe,
-      title: 'Reuters Finance feed processed',
-      description: '15 new articles fetched successfully',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      status: 'success',
-    },
-    {
-      id: '2',
-      type: 'translation',
-      icon: Languages,
-      title: 'Translation job completed',
-      description: 'English → Spanish: "Tech Market Analysis"',
-      timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-      status: 'success',
-    },
-    {
-      id: '3',
-      type: 'article_processing',
-      icon: FileText,
-      title: 'Article processing completed',
-      description: '8 articles processed and categorized',
-      timestamp: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-      status: 'success',
-    },
-    {
-      id: '4',
-      type: 'feed_fetch',
-      icon: Globe,
-      title: 'TechCrunch feed warning',
-      description: 'Feed returned fewer articles than expected',
-      timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-      status: 'warning',
-    },
-    {
-      id: '5',
-      type: 'translation',
-      icon: Languages,
-      title: 'Translation job queued',
-      description: 'Portuguese → English: "Health Innovation Report"',
-      timestamp: new Date(Date.now() - 32 * 60 * 1000).toISOString(),
-      status: 'pending',
-    },
-    {
-      id: '6',
-      type: 'feed_fetch',
-      icon: Globe,
-      title: 'El País Health feed processed',
-      description: '6 new articles fetched successfully',
-      timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      status: 'success',
-    },
-  ];
+  // TODO: Connect to actual activity service
+  const mockActivity: any[] = [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -14,7 +14,7 @@ export function TranslationMetrics() {
     refetchInterval: 60000, // Refresh every minute
   });
 
-  const mockMetrics = {
+  const mockMetrics = { // TODO: Remove when real data is connected
     job_status_distribution: [
       { name: 'Completed', value: 156, color: '#10b981' },
       { name: 'Processing', value: 23, color: '#f59e0b' },
@@ -43,7 +43,15 @@ export function TranslationMetrics() {
     ],
   };
 
-  const metricsData = metrics || mockMetrics;
+  const metricsData = metrics || {
+    job_status_distribution: [],
+    processing_stats: {
+      avg_processing_time: 0,
+      total_translations: 0,
+      success_rate: 0,
+      queue_size: 0
+    }
+  };
 
   if (isLoading) {
     return (

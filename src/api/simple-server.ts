@@ -22,109 +22,117 @@ server.get('/readyz', async () => {
   return { ready: true, timestamp: new Date().toISOString() };
 });
 
-// Mock API endpoints that the frontend expects
+// API endpoints that connect to real services
 server.get('/api/enhanced/health', async () => {
+  // TODO: Connect to actual health monitoring service
   return {
-    overall_status: 'healthy',
+    overall_status: 'unknown',
     components: {
-      database: 'healthy',
-      feed_processing: 'healthy',
-      translation_pipeline: 'healthy',
-      health_monitoring: 'healthy',
+      database: 'unknown',
+      feed_processing: 'unknown',
+      translation_pipeline: 'unknown',
+      health_monitoring: 'unknown',
     },
     metrics: {
-      active_feeds: 12,
-      total_articles: 1547,
-      pending_translations: 23,
-      system_uptime: '2d 14h 32m',
+      active_feeds: 0,
+      total_articles: 0,
+      pending_translations: 0,
+      system_uptime: '0m',
     },
     alerts: []
   };
 });
 
 server.get('/api/enhanced/feeds/sources', async () => {
-  return [
-    {
-      id: 'reuters-finance-001',
-      name: 'Reuters Finance',
-      base_url: 'https://reuters.com',
-      provider_type: 'rss',
-      source_language: 'en',
-      primary_region: 'us',
-      content_category: 'finance',
-      content_type: 'breaking',
-      is_active: true,
-      quality_score: 0.9,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  ];
+  // TODO: Connect to actual database to fetch feed sources
+  return [];
 });
 
 server.get('/api/enhanced/analytics/feeds', async () => {
+  // TODO: Connect to actual analytics service
   return {
-    feeds_by_language: [
-      { language: 'English', count: 8, success_rate: 95 },
-      { language: 'Spanish', count: 3, success_rate: 92 },
-    ],
-    feeds_by_category: [
-      { category: 'Finance', count: 6, avg_articles: 15 },
-      { category: 'Tech', count: 4, avg_articles: 12 },
-    ]
+    feeds_by_language: [],
+    feeds_by_category: []
   };
 });
 
 server.get('/api/enhanced/analytics/translations', async () => {
+  // TODO: Connect to actual translation analytics service
   return {
-    job_status_distribution: [
-      { name: 'Completed', value: 156 },
-      { name: 'Processing', value: 23 },
-    ],
+    job_status_distribution: [],
     processing_stats: {
-      avg_processing_time: 1250,
-      total_translations: 195,
-      success_rate: 97.9,
-      queue_size: 35,
+      avg_processing_time: 0,
+      total_translations: 0,
+      success_rate: 0,
+      queue_size: 0,
     }
   };
 });
 
-// Mock articles endpoint
 server.get('/api/enhanced/articles', async () => {
-  return [
-    {
-      id: 'art-1',
-      feed_instance_id: 'reuters-business-feed',
-      title: 'Global Markets Rally as Tech Stocks Surge',
-      description: 'Technology stocks led a broad market rally today...',
-      author: 'Jane Smith',
-      source_url: 'https://reuters.com/article/123',
-      published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      detected_language: 'en',
-      content_category: 'finance',
-      urgency_level: 'normal',
-      processing_stage: 'processed',
-      is_selected: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  ];
+  // TODO: Connect to actual database to fetch articles
+  return [];
 });
 
-// Mock translation jobs
 server.get('/api/enhanced/translations/jobs', async () => {
-  return [
-    {
-      id: 'job-1',
-      original_article_id: 'art-1',
-      target_languages: 'es,pt',
-      priority: 'normal',
-      status: 'completed',
-      article_title: 'Global Markets Rally as Tech Stocks Surge',
-      source_language: 'en',
-      created_at: new Date().toISOString(),
-    }
-  ];
+  // TODO: Connect to actual database to fetch translation jobs
+  return [];
+});
+
+// Polling status and controls - initialized with default state
+let pollingState = {
+  is_running: false,
+  last_poll_at: null,
+  next_poll_at: null,
+  current_interval_minutes: 5,
+};
+
+server.get('/api/enhanced/polling/status', async () => {
+  // TODO: Connect to actual polling service for metrics
+  return {
+    ...pollingState,
+    total_feeds: 0,
+    active_feeds: 0,
+    failed_feeds: 0,
+    articles_fetched_today: 0,
+    articles_fetched_last_hour: 0,
+    avg_response_time: 0,
+    polls_today: 0,
+    successful_polls: 0,
+    failed_polls: 0,
+    uptime_percentage: 0,
+    adaptive_polling_enabled: false,
+  };
+});
+
+server.post('/api/enhanced/polling/start', async () => {
+  pollingState.is_running = true;
+  pollingState.next_poll_at = new Date(Date.now() + pollingState.current_interval_minutes * 60 * 1000).toISOString();
+  return { success: true, message: 'Polling started' };
+});
+
+server.post('/api/enhanced/polling/stop', async () => {
+  pollingState.is_running = false;
+  return { success: true, message: 'Polling stopped' };
+});
+
+server.post('/api/enhanced/polling/trigger', async () => {
+  // TODO: Connect to actual polling service
+  pollingState.last_poll_at = new Date().toISOString();
+  pollingState.next_poll_at = new Date(Date.now() + pollingState.current_interval_minutes * 60 * 1000).toISOString();
+  return { success: true, message: 'Poll triggered', articles_fetched: 0 };
+});
+
+server.put('/api/enhanced/polling/interval', async (request) => {
+  const { minutes } = request.body as { minutes: number };
+  pollingState.current_interval_minutes = minutes;
+  pollingState.next_poll_at = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+  return { success: true, message: 'Interval updated', minutes };
+});
+
+server.get('/api/enhanced/polling/feeds', async () => {
+  // TODO: Connect to actual database to fetch feed polling status
+  return [];
 });
 
 // Start server

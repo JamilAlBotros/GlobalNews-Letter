@@ -11,65 +11,7 @@ export function TranslationJobsList() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Mock data for development
-  const mockJobs = [
-    {
-      id: 'job-1',
-      original_article_id: 'art-1',
-      target_languages: 'es,pt',
-      priority: 'normal',
-      status: 'completed',
-      assigned_worker: 'worker-1',
-      started_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      completed_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      estimated_completion: null,
-      translation_config: '{"model": "gpt-4", "quality": "high"}',
-      max_retries: 3,
-      retry_count: 0,
-      created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      article_title: 'Global Markets Rally as Tech Stocks Surge',
-      source_language: 'en',
-    },
-    {
-      id: 'job-2',
-      original_article_id: 'art-2',
-      target_languages: 'es,fr,pt',
-      priority: 'high',
-      status: 'processing',
-      assigned_worker: 'worker-2',
-      started_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      completed_at: null,
-      estimated_completion: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
-      translation_config: '{"model": "gpt-4", "quality": "high"}',
-      max_retries: 3,
-      retry_count: 0,
-      created_at: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-      article_title: 'New AI Framework Promises Breakthrough in Language Understanding',
-      source_language: 'en',
-    },
-    {
-      id: 'job-3',
-      original_article_id: 'art-3',
-      target_languages: 'en',
-      priority: 'normal',
-      status: 'queued',
-      assigned_worker: null,
-      started_at: null,
-      completed_at: null,
-      estimated_completion: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      translation_config: '{"model": "gpt-3.5-turbo", "quality": "standard"}',
-      max_retries: 3,
-      retry_count: 0,
-      created_at: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      article_title: 'Nuevas Regulaciones Financieras en España',
-      source_language: 'es',
-    },
-  ];
-
-  const jobsData = jobs || mockJobs;
+  const jobsData = jobs || [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {

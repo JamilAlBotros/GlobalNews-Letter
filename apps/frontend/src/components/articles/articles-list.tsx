@@ -23,60 +23,7 @@ export function ArticlesList() {
     },
   });
 
-  // Mock data for development
-  const mockArticles = [
-    {
-      id: 'art-1',
-      feed_instance_id: 'reuters-business-feed',
-      title: 'Global Markets Rally as Tech Stocks Surge',
-      description: 'Technology stocks led a broad market rally today as investors showed renewed confidence in growth sectors...',
-      content: 'Full article content here...',
-      summary: 'Tech stocks drive market gains amid investor optimism.',
-      author: 'Jane Smith',
-      source_url: 'https://reuters.com/article/123',
-      image_url: 'https://example.com/image1.jpg',
-      published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      scraped_at: new Date().toISOString(),
-      detected_language: 'en',
-      language_confidence: 0.98,
-      content_category: 'finance',
-      content_tags: 'stocks,markets,technology',
-      urgency_level: 'normal',
-      content_quality: 'high',
-      word_count: 450,
-      readability_score: 0.85,
-      processing_stage: 'processed',
-      is_selected: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'art-2',
-      feed_instance_id: 'techcrunch-main-feed',
-      title: 'New AI Framework Promises Breakthrough in Language Understanding',
-      description: 'Researchers at major tech company unveil revolutionary approach to natural language processing...',
-      content: 'Full article content here...',
-      summary: 'New AI framework advances language understanding capabilities.',
-      author: 'Alex Chen',
-      source_url: 'https://techcrunch.com/article/456',
-      published_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      scraped_at: new Date().toISOString(),
-      detected_language: 'en',
-      language_confidence: 0.96,
-      content_category: 'tech',
-      content_tags: 'AI,machine learning,NLP',
-      urgency_level: 'high',
-      content_quality: 'high',
-      word_count: 680,
-      readability_score: 0.78,
-      processing_stage: 'translated',
-      is_selected: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
-
-  const articlesData = articles || mockArticles;
+  const articlesData = articles || [];
 
   const getLanguageLabel = (code: string) => {
     const languages: Record<string, string> = {

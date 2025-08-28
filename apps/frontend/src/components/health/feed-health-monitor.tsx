@@ -65,7 +65,7 @@ export function FeedHealthMonitor() {
     ],
   };
 
-  const healthData = health || mockHealth;
+  const healthData = health || { feed_health: [], system_alerts: [] };
 
   const getStatusIcon = (status: string) => {
     switch (status) {

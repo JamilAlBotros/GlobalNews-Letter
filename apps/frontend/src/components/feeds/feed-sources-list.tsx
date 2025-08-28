@@ -14,53 +14,7 @@ export function FeedSourcesList() {
     queryFn: () => apiClient.getFeedSources(),
   });
 
-  // Mock data for development
-  const mockSources = [
-    {
-      id: 'reuters-finance-001',
-      name: 'Reuters Finance',
-      base_url: 'https://reuters.com',
-      provider_type: 'rss',
-      source_language: 'en',
-      primary_region: 'us',
-      content_category: 'finance',
-      content_type: 'breaking',
-      is_active: true,
-      quality_score: 0.9,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'techcrunch-001',
-      name: 'TechCrunch',
-      base_url: 'https://techcrunch.com',
-      provider_type: 'rss',
-      source_language: 'en',
-      primary_region: 'us',
-      content_category: 'tech',
-      content_type: 'daily',
-      is_active: true,
-      quality_score: 0.85,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'elpais-salud-001',
-      name: 'El País Salud',
-      base_url: 'https://elpais.com',
-      provider_type: 'rss',
-      source_language: 'es',
-      primary_region: 'es',
-      content_category: 'health',
-      content_type: 'daily',
-      is_active: true,
-      quality_score: 0.8,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
-
-  const sourcesData = sources || mockSources;
+  const sourcesData = sources || [];
 
   const filteredSources = sourcesData.filter((source) => {
     const categoryMatch = selectedCategory === 'all' || source.content_category === selectedCategory;

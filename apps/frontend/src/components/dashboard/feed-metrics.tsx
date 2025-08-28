@@ -12,7 +12,7 @@ export function FeedMetrics() {
     refetchInterval: 60000, // Refresh every minute
   });
 
-  const mockMetrics = {
+  const mockMetrics = { // TODO: Remove when real data is connected
     feeds_by_language: [
       { language: 'English', count: 8, success_rate: 95 },
       { language: 'Spanish', count: 3, success_rate: 92 },
@@ -39,7 +39,11 @@ export function FeedMetrics() {
     ],
   };
 
-  const metricsData = metrics || mockMetrics;
+  const metricsData = metrics || {
+    feeds_by_language: [],
+    feeds_by_category: [],
+    refresh_tier_performance: []
+  };
 
   if (isLoading) {
     return (

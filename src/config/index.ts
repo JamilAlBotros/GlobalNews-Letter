@@ -5,11 +5,11 @@ import { z } from 'zod';
 config({ path: '.local.env' });
 
 const ConfigSchema = z.object({
-  NEWSAPI_API_KEY: z.string().min(1, 'NewsAPI key is required'),
+  NEWSAPI_API_KEY: z.string().optional(),
   NEWSAPI_BASE_URL: z.string().url().default('https://newsapi.org/v2'),
   LLM_API_URL: z.string().url().default('http://localhost:11434'),
   LLM_MODEL: z.string().default('codellama:7b'),
-  DATABASE_PATH: z.string().default('./data/articles.db'),
+  DATABASE_PATH: z.string().default('./data/news.db'),
   OUTPUT_DIR: z.string().default('./output'),
 });
 

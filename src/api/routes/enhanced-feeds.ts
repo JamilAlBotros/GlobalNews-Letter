@@ -45,8 +45,8 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
   // FEED SOURCE MANAGEMENT
   // ============================================
 
-  // GET /api/v2/feeds/sources - List feed sources with filters
-  fastify.get('/sources', {
+  // GET /api/enhanced/feeds/sources - List feed sources with filters
+  fastify.get('/feeds/sources', {
     schema: {
       querystring: FeedQuerySchema,
       response: {
@@ -77,8 +77,8 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
     };
   });
 
-  // POST /api/v2/feeds/sources - Create new feed source
-  fastify.post('/sources', {
+  // POST /api/enhanced/feeds/sources - Create new feed source  
+  fastify.post('/feeds/sources', {
     schema: {
       body: CreateFeedSourceSchema,
       response: {
@@ -112,8 +112,8 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
     }
   });
 
-  // PUT /api/v2/feeds/sources/:id - Update feed source
-  fastify.put('/sources/:id', {
+  // PUT /api/enhanced/feeds/sources/:id - Update feed source
+  fastify.put('/feeds/sources/:id', {
     schema: {
       params: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
       body: UpdateFeedSourceSchema,

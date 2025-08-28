@@ -45,6 +45,7 @@ export function TranslationMetrics() {
 
   const metricsData = metrics || {
     job_status_distribution: [],
+    language_pairs: [],
     processing_stats: {
       avg_processing_time: 0,
       total_translations: 0,

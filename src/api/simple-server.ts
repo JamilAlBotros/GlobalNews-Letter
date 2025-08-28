@@ -48,11 +48,34 @@ server.get('/api/enhanced/feeds/sources', async () => {
   return [];
 });
 
+server.post('/api/enhanced/feeds/sources', async (request, reply) => {
+  // TODO: Connect to actual database to save feed source
+  const body = request.body as any;
+  
+  // Mock response for now
+  const feedSource = {
+    id: `mock-${Date.now()}`,
+    name: body.name,
+    rss_url: body.rss_url,
+    source_language: body.source_language,
+    content_category: body.content_category,
+    refresh_tier: body.refresh_tier,
+    is_active: true,
+    quality_score: 0.5,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  
+  reply.code(201);
+  return feedSource;
+});
+
 server.get('/api/enhanced/analytics/feeds', async () => {
   // TODO: Connect to actual analytics service
   return {
     feeds_by_language: [],
-    feeds_by_category: []
+    feeds_by_category: [],
+    refresh_tier_performance: []
   };
 });
 
@@ -60,6 +83,7 @@ server.get('/api/enhanced/analytics/translations', async () => {
   // TODO: Connect to actual translation analytics service
   return {
     job_status_distribution: [],
+    language_pairs: [],
     processing_stats: {
       avg_processing_time: 0,
       total_translations: 0,
@@ -132,6 +156,46 @@ server.put('/api/enhanced/polling/interval', async (request) => {
 
 server.get('/api/enhanced/polling/feeds', async () => {
   // TODO: Connect to actual database to fetch feed polling status
+  return [];
+});
+
+// Missing endpoints that frontend expects
+server.get('/api/enhanced/feeds/instances', async () => {
+  // TODO: Connect to actual database to fetch feed instances
+  return [];
+});
+
+server.get('/api/enhanced/health/analytics', async () => {
+  // TODO: Connect to actual health analytics service
+  return {
+    system_metrics: [],
+    performance_trends: [],
+    alert_history: []
+  };
+});
+
+server.get('/api/enhanced/database/backups', async () => {
+  // TODO: Connect to actual backup service
+  return [];
+});
+
+server.post('/api/enhanced/database/backup', async () => {
+  // TODO: Implement backup functionality
+  return { success: true, filename: `backup-${Date.now()}.db` };
+});
+
+server.post('/api/enhanced/database/restore', async () => {
+  // TODO: Implement restore functionality
+  return { success: true, message: 'Database restored' };
+});
+
+server.post('/api/enhanced/database/wipe', async () => {
+  // TODO: Implement wipe functionality
+  return { success: true, message: 'Database wiped' };
+});
+
+server.get('/api/enhanced/translations', async () => {
+  // TODO: Connect to actual translation service
   return [];
 });
 

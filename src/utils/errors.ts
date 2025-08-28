@@ -10,6 +10,9 @@ export interface ProblemDetails {
   status: number;
   detail?: string | undefined;
   instance: string;
+  requestId?: string;
+  timestamp?: string;
+  errors?: Record<string, any>;
 }
 
 /**
@@ -104,6 +107,54 @@ export class DuplicateError extends ServiceError {
       'about:blank#duplicate-resource',
       `Duplicate ${resource}`,
       409,
+      detail,
+      instance
+    );
+  }
+}
+
+export class AuthenticationError extends ServiceError {
+  constructor(detail?: string, instance?: string) {
+    super(
+      'about:blank#authentication-error',
+      'Authentication Required',
+      401,
+      detail,
+      instance
+    );
+  }
+}
+
+export class AuthorizationError extends ServiceError {
+  constructor(detail?: string, instance?: string) {
+    super(
+      'about:blank#authorization-error',
+      'Forbidden',
+      403,
+      detail,
+      instance
+    );
+  }
+}
+
+export class RateLimitError extends ServiceError {
+  constructor(detail?: string, instance?: string) {
+    super(
+      'about:blank#rate-limit-error',
+      'Rate Limit Exceeded',
+      429,
+      detail,
+      instance
+    );
+  }
+}
+
+export class TimeoutError extends ServiceError {
+  constructor(operation: string, detail?: string, instance?: string) {
+    super(
+      'about:blank#timeout-error',
+      `Operation Timeout: ${operation}`,
+      408,
       detail,
       instance
     );

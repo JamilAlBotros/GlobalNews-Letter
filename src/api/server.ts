@@ -7,7 +7,9 @@ import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 import { createProblemDetails, HealthCheckResponseSchema, ReadinessCheckResponseSchema } from './schemas/common-schemas.js';
-import { DatabaseService } from '../services/database.js';
+import { env, securityConfig, isDevelopment } from '../config/environment.js';
+import { AuthService } from '../services/auth-service.js';
+import { EnhancedDatabaseService } from '../services/enhanced-database.js';
 import { RSSPoller } from '../services/rss-poller.js';
 import enhancedFeedsRoutes from './routes/enhanced-feeds.js';
 
@@ -25,27 +27,29 @@ export interface ServerConfig {
   version: string;
 }
 
-// Default configuration
+// Default configuration from environment
 const DEFAULT_CONFIG: ServerConfig = {
-  port: parseInt(process.env.API_PORT || '3333'),
-  host: process.env.API_HOST || '127.0.0.1',
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:3000').split(','),
-  rateLimitRps: parseInt(process.env.RATE_LIMIT_RPS || '10'),
-  environment: (process.env.NODE_ENV as any) || 'development',
-  version: process.env.npm_package_version || '1.0.0'
+  port: env.API_PORT,
+  host: env.API_HOST,
+  corsOrigins: securityConfig.cors.origins,
+  rateLimitRps: securityConfig.rateLimit.rps,
+  environment: env.NODE_ENV,
+  version: '1.0.0'
 };
 
 export class ApiServer {
   private fastify: FastifyInstance;
   private config: ServerConfig;
-  private database: DatabaseService;
+  private database: EnhancedDatabaseService;
+  private authService: AuthService;
   private rssPoller?: RSSPoller;
   private startTime: number;
 
   constructor(config: Partial<ServerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.startTime = Date.now();
-    this.database = new DatabaseService();
+    this.database = new EnhancedDatabaseService();
+    this.authService = new AuthService();
     
     // Initialize Fastify with logging
     this.fastify = Fastify({
@@ -93,7 +97,7 @@ export class ApiServer {
         if (!origin) return callback(null, true);
         
         const isAllowed = this.config.corsOrigins.some(allowedOrigin => {
-          if (this.config.environment === 'development') {
+          if (isDevelopment) {
             return origin.startsWith('http://localhost') || origin === allowedOrigin;
           }
           return origin === allowedOrigin;
@@ -117,6 +121,37 @@ export class ApiServer {
       })
     });
 
+    // Authentication hook (skip for public routes)
+    this.fastify.addHook('preHandler', async (request, reply) => {
+      // Skip auth for health checks and public routes
+      const publicRoutes = ['/healthz', '/readyz', '/api/v1'];
+      const isPublicRoute = publicRoutes.some(route => request.url.startsWith(route));
+      
+      if (isPublicRoute || env.DEV_SKIP_AUTH) {
+        return;
+      }
+
+      try {
+        const authHeader = request.headers.authorization;
+        const user = await this.authService.authenticateRequest(authHeader);
+        
+        // Attach user to request for use in handlers
+        (request as any).user = user;
+      } catch (error) {
+        const statusCode = error instanceof Error && 'statusCode' in error ? 
+          (error as any).statusCode : 401;
+        
+        reply.code(statusCode).type('application/problem+json').send({
+          type: 'about:blank',
+          title: 'Authentication Failed',
+          status: statusCode,
+          detail: error instanceof Error ? error.message : 'Authentication required',
+          instance: request.url,
+          requestId: (request as any).requestId
+        });
+      }
+    });
+
     // Structured logging
     this.fastify.addHook('onResponse', async (request, reply) => {
       const duration = performance.now() - (request as any).startTime;
@@ -128,7 +163,8 @@ export class ApiServer {
         statusCode: reply.statusCode,
         responseTime: Math.round(duration),
         userAgent: request.headers['user-agent'],
-        ip: request.ip
+        ip: request.ip,
+        userId: (request as any).user?.sub
       }, 'Request completed');
     });
   }
@@ -154,7 +190,8 @@ export class ApiServer {
       
       try {
         const start = performance.now();
-        await this.database.getArticleStats();
+        // Simple health check query
+        await this.database.initialize();
         databaseResponseTime = performance.now() - start;
       } catch (error) {
         databaseStatus = 'error';
@@ -190,6 +227,53 @@ export class ApiServer {
       timestamp: new Date().toISOString(),
       documentation: '/api/v1/docs'
     }));
+
+    // Authentication endpoints
+    this.fastify.post('/api/v1/auth/login', {
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            username: { type: 'string' },
+            password: { type: 'string' },
+            apiKey: { type: 'string' }
+          },
+          anyOf: [
+            { required: ['username', 'password'] },
+            { required: ['apiKey'] }
+          ]
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              accessToken: { type: 'string' },
+              tokenType: { type: 'string' },
+              expiresAt: { type: 'string' }
+            }
+          }
+        }
+      }
+    }, async (request, reply) => {
+      const { username, password, apiKey } = request.body as any;
+      
+      try {
+        const authToken = await this.authService.authenticate(username, password, apiKey);
+        return authToken;
+      } catch (error) {
+        const statusCode = error instanceof Error && 'statusCode' in error ? 
+          (error as any).statusCode : 401;
+        
+        reply.code(statusCode).type('application/problem+json').send({
+          type: 'about:blank',
+          title: 'Authentication Failed',
+          status: statusCode,
+          detail: error instanceof Error ? error.message : 'Authentication failed',
+          instance: request.url,
+          requestId: (request as any).requestId
+        });
+      }
+    });
 
     // Register route plugins
     this.registerFeedRoutes();
@@ -324,6 +408,9 @@ export class ApiServer {
    */
   async start(): Promise<void> {
     try {
+      // Initialize database
+      await this.database.initialize();
+      
       await this.fastify.listen({ 
         port: this.config.port, 
         host: this.config.host 

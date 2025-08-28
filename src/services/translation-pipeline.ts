@@ -1,5 +1,5 @@
 import { EnhancedDatabaseService } from './enhanced-database.js';
-import { LLMService } from './llm.js';
+import { LLMService } from './llm-service.js';
 import type { 
   ArticleOriginal, 
   ArticleTranslation, 

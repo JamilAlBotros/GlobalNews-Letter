@@ -1,4 +1,4 @@
-import { getDatabase } from "./connection.js";
+import { getDatabase, closeDatabase } from "./connection.js";
 
 export async function initializeDatabase(): Promise<void> {
   const db = getDatabase();
@@ -52,5 +52,15 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  initializeDatabase().catch(console.error);
+  initializeDatabase()
+    .then(async () => {
+      console.log("Database initialization complete");
+      await closeDatabase();
+      process.exit(0);
+    })
+    .catch(async (error) => {
+      console.error("Database initialization failed:", error);
+      await closeDatabase();
+      process.exit(1);
+    });
 }

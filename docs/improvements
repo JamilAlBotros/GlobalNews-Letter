@@ -1,0 +1,54 @@
+ Backend-Only Refactoring Recommendations
+
+  Immediate (High Impact)
+
+  1. Split ArticleService into focused services
+    - Extract DuplicationService utility (shared duplicate checking logic)
+    - Create ArticleFetchService (NewsAPI operations only)
+    - Create ArticleProcessingService (LLM processing only)
+    - Create ArticleStorageService (database operations only)
+  2. Add structured error handling across all services
+    - Implement problem+json format (type, title, status, detail, instance)
+    - Replace console.error() with structured error responses
+    - Add error context and request correlation IDs
+  3. Create database connection management
+    - Add connection pooling for SQLite
+    - Implement transaction management for multi-step operations
+    - Add proper connection cleanup and timeout handling
+
+  Short-term (Medium Impact)
+
+  4. Implement dependency injection container
+    - Create ServiceContainer interface
+    - Remove hard-coded service instantiation from constructors
+    - Enable better testing and service lifecycle management
+  5. Add health monitoring services
+    - Create HealthService for /healthz and /readyz endpoints
+    - Implement database connectivity checks
+    - Add external service status monitoring (LLM, RSS feeds)
+  6. Standardize logging across services
+    - Add structured JSON logging with consistent format
+    - Include request IDs, latency, and service context
+    - Replace console.log with proper logging service
+
+  Long-term (Architecture Improvements)
+
+  7. Split database services by domain
+    - Create ArticleRepository (articles table operations)
+    - Create RSSFeedRepository (RSS feeds table operations)
+    - Extract shared DatabaseConnection base class
+  8. Improve configuration management
+    - Move config validation from module load to service initialization
+    - Add environment-specific configuration loading
+    - Implement graceful degradation for missing services
+  9. Add service resilience patterns
+    - Implement circuit breaker for external API calls
+    - Add retry logic with exponential backoff
+    - Create timeout and rate limiting for RSS polling
+  10. Create proper service lifecycle management
+    - Add graceful shutdown handling (SIGTERM/SIGINT)
+    - Implement proper resource cleanup
+    - Add service startup/shutdown orchestration
+
+  All recommendations focus purely on backend services, database management, API resilience, and service
+  architecture improvements. No frontend or UI components involved.

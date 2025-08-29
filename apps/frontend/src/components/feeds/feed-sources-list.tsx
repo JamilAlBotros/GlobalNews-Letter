@@ -9,36 +9,21 @@ export function FeedSourcesList() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
 
-  const { data: sources, isLoading, error, refetch } = useQuery({
-    queryKey: ['feed-sources'],
-    queryFn: () => apiClient.getFeedSources(),
+  const { data: feeds, isLoading, error, refetch } = useQuery({
+    queryKey: ['feeds'],
+    queryFn: () => apiClient.getFeeds(1, 100),
   });
 
-  const sourcesData = sources || [];
+  const feedsData = feeds || [];
 
-  const filteredSources = sourcesData.filter((source) => {
-    const categoryMatch = selectedCategory === 'all' || source.content_category === selectedCategory;
-    const languageMatch = selectedLanguage === 'all' || source.source_language === selectedLanguage;
+  const filteredFeeds = feedsData.filter((feed) => {
+    const categoryMatch = selectedCategory === 'all' || feed.category === selectedCategory;
+    const languageMatch = selectedLanguage === 'all' || feed.language === selectedLanguage;
     return categoryMatch && languageMatch;
   });
 
-  const getLanguageLabel = (code: string) => {
-    const languages: Record<string, string> = {
-      en: 'English',
-      es: 'Spanish',
-      pt: 'Portuguese',
-      fr: 'French',
-      ar: 'Arabic',
-      zh: 'Chinese',
-      ja: 'Japanese',
-    };
-    return languages[code] || code.toUpperCase();
-  };
-
-  const getQualityColor = (score: number) => {
-    if (score >= 0.8) return 'text-green-600 bg-green-100';
-    if (score >= 0.6) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+  const getLanguageLabel = (language: string) => {
+    return language; // Already in full form like "English", "Spanish", etc.
   };
 
   if (isLoading) {
@@ -90,10 +75,20 @@ export function FeedSourcesList() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
             >
               <option value="all">All Categories</option>
-              <option value="finance">Finance</option>
-              <option value="tech">Technology</option>
-              <option value="health">Health</option>
-              <option value="general">General</option>
+              <option value="News">News</option>
+              <option value="Technology">Technology</option>
+              <option value="Finance">Finance</option>
+              <option value="Science">Science</option>
+              <option value="Sports">Sports</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Health">Health</option>
+              <option value="Travel">Travel</option>
+              <option value="Education">Education</option>
+              <option value="Business">Business</option>
+              <option value="Politics">Politics</option>
+              <option value="Gaming">Gaming</option>
+              <option value="Crypto">Crypto</option>
+              <option value="Lifestyle">Lifestyle</option>
             </select>
           </div>
           
@@ -108,28 +103,28 @@ export function FeedSourcesList() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
             >
               <option value="all">All Languages</option>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="pt">Portuguese</option>
-              <option value="fr">French</option>
-              <option value="ar">Arabic</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
+              <option value="English">English</option>
+              <option value="Spanish">Spanish</option>
+              <option value="Portuguese">Portuguese</option>
+              <option value="French">French</option>
+              <option value="Arabic">Arabic</option>
+              <option value="Chinese">Chinese</option>
+              <option value="Japanese">Japanese</option>
             </select>
           </div>
           
           <div className="flex-1" />
           
           <div className="text-sm text-gray-600">
-            {filteredSources.length} sources
+            {filteredFeeds.length} feeds
           </div>
         </div>
       </div>
 
-      {/* Sources List */}
+      {/* Feeds List */}
       <div className="divide-y divide-gray-200">
-        {filteredSources.map((source) => (
-          <div key={source.id} className="px-6 py-4 hover:bg-gray-50">
+        {filteredFeeds.map((feed) => (
+          <div key={feed.id} className="px-6 py-4 hover:bg-gray-50">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">
@@ -141,43 +136,38 @@ export function FeedSourcesList() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-3">
                     <h3 className="text-sm font-medium text-gray-900 truncate">
-                      {source.name}
+                      {feed.name}
                     </h3>
-                    {!source.is_active && (
+                    {!feed.is_active && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
                         Inactive
                       </span>
                     )}
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                      {source.provider_type.toUpperCase()}
+                      RSS
                     </span>
                   </div>
                   
                   <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                    <span>{getLanguageLabel(source.source_language)}</span>
+                    <span>{getLanguageLabel(feed.language)}</span>
                     <span>•</span>
-                    <span className="capitalize">{source.content_category}</span>
+                    <span>{feed.category}</span>
                     <span>•</span>
-                    <span className="capitalize">{source.content_type}</span>
-                    {source.primary_region && (
-                      <>
-                        <span>•</span>
-                        <span className="uppercase">{source.primary_region}</span>
-                      </>
-                    )}
+                    <span>{feed.type}</span>
+                    <span>•</span>
+                    <span>{feed.region}</span>
                   </div>
                   
                   <div className="mt-2 text-xs text-gray-400 truncate">
-                    {source.base_url}
+                    {feed.url}
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getQualityColor(source.quality_score)}`}>
-                    {(source.quality_score * 100).toFixed(0)}%
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-green-600 bg-green-100">
+                    Active
                   </span>
                 </div>
                 
@@ -195,12 +185,12 @@ export function FeedSourcesList() {
         ))}
       </div>
 
-      {filteredSources.length === 0 && (
+      {filteredFeeds.length === 0 && (
         <div className="px-6 py-8 text-center">
           <Globe className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No feed sources found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No feeds found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Try adjusting your filters or create a new feed source.
+            Try adjusting your filters or create a new feed.
           </p>
         </div>
       )}

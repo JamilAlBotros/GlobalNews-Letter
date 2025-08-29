@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { v4 as uuidv4 } from "uuid";
-import { Feed, CreateFeedInput, UpdateFeedInput, PaginationQuery } from "@acme/contracts";
+import { Feed, CreateFeedInput, UpdateFeedInput } from "../schemas/feed.js";
+import { PaginationQuery } from "../schemas/common.js";
 import { getDatabase } from "../database/connection.js";
 
 interface FeedRow {
@@ -70,8 +71,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     );
 
     if (existingFeed) {
-      reply.code(409);
-      throw new Error("Feed with this URL already exists");
+      return reply.code(409).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Feed with this URL already exists",
+        status: 409,
+        instance: request.url
+      });
     }
 
     const id = uuidv4();
@@ -96,8 +101,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     
     const feed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
     if (!feed) {
-      reply.code(404);
-      throw new Error("Feed not found");
+      return reply.code(404).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Feed not found",
+        status: 404,
+        instance: request.url
+      });
     }
 
     return mapFeedRow(feed);
@@ -109,8 +118,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
 
     const existingFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
     if (!existingFeed) {
-      reply.code(404);
-      throw new Error("Feed not found");
+      return reply.code(404).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Feed not found",
+        status: 404,
+        instance: request.url
+      });
     }
 
     if (input.url && input.url !== existingFeed.url) {
@@ -183,8 +196,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     
     const existingFeed = await db.get<FeedRow>("SELECT id FROM feeds WHERE id = ?", id);
     if (!existingFeed) {
-      reply.code(404);
-      throw new Error("Feed not found");
+      return reply.code(404).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Feed not found",
+        status: 404,
+        instance: request.url
+      });
     }
 
     await db.run("DELETE FROM feeds WHERE id = ?", id);

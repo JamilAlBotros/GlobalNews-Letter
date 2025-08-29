@@ -107,9 +107,12 @@ export class SQLiteConnection implements DatabaseConnection {
 
 let globalConnection: SQLiteConnection | null = null;
 
-export function getDatabase(): SQLiteConnection {
+export function getDatabase(dbPath?: string): SQLiteConnection {
   if (!globalConnection) {
-    globalConnection = new SQLiteConnection();
+    const path = dbPath || (process.env.NODE_ENV === 'test' 
+      ? `data/test-${process.pid}-${Math.random().toString(36).substr(2, 9)}.db` 
+      : 'data/news.db');
+    globalConnection = new SQLiteConnection(path);
   }
   return globalConnection;
 }
@@ -119,6 +122,10 @@ export async function closeDatabase(): Promise<void> {
     await globalConnection.close();
     globalConnection = null;
   }
+}
+
+export async function resetDatabase(): Promise<void> {
+  await closeDatabase();
 }
 
 process.on("SIGINT", () => closeDatabase());

@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { v4 as uuidv4 } from "uuid";
-import { Article, CreateArticleInput, UpdateArticleInput, PaginationQuery } from "@acme/contracts";
+import { Article, CreateArticleInput, UpdateArticleInput } from "../schemas/article.js";
+import { PaginationQuery } from "../schemas/common.js";
 import { getDatabase } from "../database/connection.js";
 
 interface ArticleRow {
@@ -81,8 +82,12 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     );
 
     if (!existingFeed) {
-      reply.code(400);
-      throw new Error("Feed not found");
+      return reply.code(400).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Feed not found",
+        status: 400,
+        instance: request.url
+      });
     }
 
     const existingArticle = await db.get<ArticleRow>(
@@ -91,8 +96,12 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     );
 
     if (existingArticle) {
-      reply.code(409);
-      throw new Error("Article with this URL already exists");
+      return reply.code(409).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Article with this URL already exists",
+        status: 409,
+        instance: request.url
+      });
     }
 
     const id = uuidv4();
@@ -127,8 +136,12 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     
     const article = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = ?", id);
     if (!article) {
-      reply.code(404);
-      throw new Error("Article not found");
+      return reply.code(404).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Article not found",
+        status: 404,
+        instance: request.url
+      });
     }
 
     return mapArticleRow(article);

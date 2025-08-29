@@ -1,55 +1,33 @@
 import { z } from 'zod';
 
-// Frontend API schemas (simplified versions of backend schemas)
-export const FeedSource = z.object({
+// Frontend API schemas (matching new simplified backend)
+export const Feed = z.object({
   id: z.string(),
   name: z.string(),
-  base_url: z.string(),
-  provider_type: z.enum(['rss', 'google_rss', 'api', 'scraper']),
-  source_language: z.enum(['en', 'es', 'ar', 'pt', 'fr', 'zh', 'ja']),
-  primary_region: z.string().optional(),
-  content_category: z.enum(['finance', 'tech', 'health', 'general']),
-  content_type: z.enum(['breaking', 'analysis', 'daily', 'weekly']),
+  url: z.string(),
+  language: z.enum(["English", "Spanish", "Arabic", "Portuguese", "French", "Chinese", "Japanese"]),
+  region: z.string(),
+  category: z.enum(["News", "Technology", "Finance", "Science", "Sports", "Entertainment", "Health", "Travel", "Education", "Business", "Politics", "Gaming", "Crypto", "Lifestyle"]),
+  type: z.enum(["News", "Analysis", "Blog", "Tutorial", "Recipe", "Review", "Research"]),
   is_active: z.boolean(),
-  quality_score: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
 });
 
-export const FeedInstance = z.object({
+export const Article = z.object({
   id: z.string(),
-  source_id: z.string(),
-  instance_name: z.string(),
-  feed_url: z.string(),
-  refresh_tier: z.enum(['realtime', 'frequent', 'standard', 'slow']),
-  base_refresh_minutes: z.number(),
-  is_active: z.boolean(),
-  reliability_score: z.number(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-
-export const ArticleOriginal = z.object({
-  id: z.string(),
-  feed_instance_id: z.string(),
+  feed_id: z.string(),
   title: z.string(),
-  description: z.string().optional(),
-  content: z.string().optional(),
-  author: z.string().optional(),
-  source_url: z.string(),
+  description: z.string().nullable(),
+  content: z.string().nullable(),
+  url: z.string(),
   published_at: z.string(),
-  detected_language: z.string(),
-  content_category: z.string().optional(),
-  urgency_level: z.enum(['breaking', 'high', 'normal', 'low']).optional(),
-  processing_stage: z.enum(['pending', 'processed', 'translated', 'published', 'failed']),
-  is_selected: z.boolean(),
+  scraped_at: z.string(),
   created_at: z.string(),
-  updated_at: z.string(),
 });
 
-export type FeedSourceType = z.infer<typeof FeedSource>;
-export type FeedInstanceType = z.infer<typeof FeedInstance>;
-export type ArticleOriginalType = z.infer<typeof ArticleOriginal>;
+export type FeedType = z.infer<typeof Feed>;
+export type ArticleType = z.infer<typeof Article>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
 
@@ -124,186 +102,95 @@ class ApiClient {
     return data;
   }
 
-  // Feed Sources
-  async getFeedSources() {
+  // Feeds
+  async getFeeds(page: number = 1, limit: number = 20) {
     try {
       const response = await this.request<{
-        data: FeedSourceType[];
-        pagination: { page: number; limit: number; total: number; totalPages: number };
-      }>('/api/enhanced/feeds/sources', {
-        query: { page: '1', limit: '100' }
+        data: FeedType[];
+        pagination: { page: number; limit: number; total: number; total_pages: number };
+      }>('/feeds', {
+        query: { page, limit }
       });
       return response?.data || [];
     } catch (error) {
-      console.error('Failed to fetch feed sources:', error);
+      console.error('Failed to fetch feeds:', error);
       return [];
     }
   }
 
-  async createFeedSource(data: any, idempotencyKey?: string) {
-    return this.request('/api/enhanced/feeds/sources', {
+  async getFeed(id: string) {
+    return this.request<FeedType>(`/feeds/${id}`);
+  }
+
+  async createFeed(data: Omit<FeedType, 'id' | 'created_at' | 'updated_at'>, idempotencyKey?: string) {
+    return this.request<FeedType>('/feeds', {
       method: 'POST',
       body: JSON.stringify(data),
       idempotencyKey,
     });
   }
 
-  async updateFeedSource(id: string, data: any) {
-    return this.request(`/api/enhanced/feeds/sources/${id}`, {
+  async updateFeed(id: string, data: Partial<Omit<FeedType, 'id' | 'created_at' | 'updated_at'>>) {
+    return this.request<FeedType>(`/feeds/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteFeedSource(id: string) {
-    return this.request(`/api/enhanced/feeds/sources/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Feed Instances
-  async getFeedInstances(sourceId?: string) {
-    return this.request('/api/enhanced/feeds/instances', {
-      query: sourceId ? { source_id: sourceId } : {},
-    });
-  }
-
-  async createFeedInstance(data: any, idempotencyKey?: string) {
-    return this.request('/api/enhanced/feeds/instances', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      idempotencyKey,
-    });
-  }
-
-  async updateFeedInstance(id: string, data: any) {
-    return this.request(`/api/enhanced/feeds/instances/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteFeedInstance(id: string) {
-    return this.request(`/api/enhanced/feeds/instances/${id}`, {
+  async deleteFeed(id: string) {
+    return this.request(`/feeds/${id}`, {
       method: 'DELETE',
     });
   }
 
   // Articles
-  async getArticles(filters: {
-    language?: string;
-    category?: string;
-    processing_stage?: string;
-    limit?: number;
-    offset?: number;
-  } = {}) {
-    return this.request('/api/enhanced/articles', { query: filters });
+  async getArticles(page: number = 1, limit: number = 20, feedId?: string) {
+    try {
+      const query: any = { page, limit };
+      if (feedId) query.feed_id = feedId;
+      
+      const response = await this.request<{
+        data: ArticleType[];
+        pagination: { page: number; limit: number; total: number; total_pages: number };
+      }>('/articles', { query });
+      return response?.data || [];
+    } catch (error) {
+      console.error('Failed to fetch articles:', error);
+      return [];
+    }
   }
 
   async getArticle(id: string) {
-    return this.request(`/api/enhanced/articles/${id}`);
+    return this.request<ArticleType>(`/articles/${id}`);
   }
 
-  async updateArticle(id: string, data: any) {
-    return this.request(`/api/enhanced/articles/${id}`, {
+  async createArticle(data: Omit<ArticleType, 'id' | 'scraped_at' | 'created_at'>) {
+    return this.request<ArticleType>('/articles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateArticle(id: string, data: Partial<Omit<ArticleType, 'id' | 'feed_id' | 'scraped_at' | 'created_at'>>) {
+    return this.request<ArticleType>(`/articles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  // Translations
-  async getTranslations(articleId?: string) {
-    return this.request('/api/enhanced/translations', {
-      query: articleId ? { article_id: articleId } : {},
+  async deleteArticle(id: string) {
+    return this.request(`/articles/${id}`, {
+      method: 'DELETE',
     });
   }
 
-  async createTranslationJob(data: any, idempotencyKey?: string) {
-    return this.request('/api/enhanced/translations/jobs', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      idempotencyKey,
-    });
+  // Health endpoints
+  async getHealth() {
+    return this.request('/healthz');
   }
 
-  async getTranslationJobs() {
-    return this.request('/api/enhanced/translations/jobs');
-  }
-
-  // Health & Analytics
-  async getSystemHealth() {
-    return this.request('/api/enhanced/health');
-  }
-
-  async getHealthAnalytics() {
-    return this.request('/api/enhanced/health/analytics');
-  }
-
-  async getFeedMetrics() {
-    return this.request('/api/enhanced/analytics/feeds');
-  }
-
-  async getTranslationMetrics() {
-    return this.request('/api/enhanced/analytics/translations');
-  }
-
-  // Database Management
-  async createBackup(options: { compress?: boolean } = {}) {
-    return this.request('/api/enhanced/database/backup', {
-      method: 'POST',
-      body: JSON.stringify(options),
-    });
-  }
-
-  async getBackups() {
-    return this.request('/api/enhanced/database/backups');
-  }
-
-  async restoreBackup(filename: string) {
-    return this.request('/api/enhanced/database/restore', {
-      method: 'POST',
-      body: JSON.stringify({ filename }),
-    });
-  }
-
-  async wipeDatabase() {
-    return this.request('/api/enhanced/database/wipe', {
-      method: 'POST',
-    });
-  }
-
-  // Polling Management
-  async getPollingStatus() {
-    return this.request('/api/enhanced/polling/status');
-  }
-
-  async startPolling() {
-    return this.request('/api/enhanced/polling/start', {
-      method: 'POST',
-    });
-  }
-
-  async stopPolling() {
-    return this.request('/api/enhanced/polling/stop', {
-      method: 'POST',
-    });
-  }
-
-  async triggerPoll() {
-    return this.request('/api/enhanced/polling/trigger', {
-      method: 'POST',
-    });
-  }
-
-  async updatePollingInterval(data: { minutes: number }) {
-    return this.request('/api/enhanced/polling/interval', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async getActiveFeedsStatus() {
-    return this.request('/api/enhanced/polling/feeds');
+  async getReadiness() {
+    return this.request('/readyz');
   }
 }
 

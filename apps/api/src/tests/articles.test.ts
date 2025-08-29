@@ -2,13 +2,16 @@ import { test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import Fastify, { FastifyInstance } from "fastify";
 import { articleRoutes } from "../routes/articles.js";
 import { feedRoutes } from "../routes/feeds.js";
-import { getDatabase, closeDatabase } from "../database/connection.js";
+import { getDatabase, closeDatabase, resetDatabase } from "../database/connection.js";
 import { initializeDatabase } from "../database/init.js";
 
 let app: FastifyInstance;
 let testFeedId: string;
 
 beforeAll(async () => {
+  process.env.NODE_ENV = 'test';
+  await resetDatabase(); // Ensure clean database state
+  
   app = Fastify();
   await app.register(feedRoutes);
   await app.register(articleRoutes);

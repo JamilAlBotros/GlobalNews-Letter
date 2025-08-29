@@ -1,12 +1,15 @@
 import { test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import Fastify, { FastifyInstance } from "fastify";
 import { feedRoutes } from "../routes/feeds.js";
-import { getDatabase, closeDatabase } from "../database/connection.js";
+import { getDatabase, closeDatabase, resetDatabase } from "../database/connection.js";
 import { initializeDatabase } from "../database/init.js";
 
 let app: FastifyInstance;
 
 beforeAll(async () => {
+  process.env.NODE_ENV = 'test';
+  await resetDatabase(); // Ensure clean database state
+  
   app = Fastify();
   await app.register(feedRoutes);
   await initializeDatabase();
@@ -213,6 +216,10 @@ test("DELETE /feeds/:id deletes feed", async () => {
 });
 
 test("GET /feeds with pagination", async () => {
+  // First clear any existing feeds to ensure exact count
+  const db = getDatabase();
+  await db.run("DELETE FROM feeds");
+  
   for (let i = 0; i < 25; i++) {
     await app.inject({
       method: "POST",

@@ -1,165 +1,250 @@
 # 🌍 GlobalNews Letter
 
-A multi-language news aggregation and curation system that fetches, processes, and curates articles from various sources into customizable newsletters.
+A modern RSS news aggregation system with web interface and API backend. Built with TypeScript following MVP-first principles for rapid development and testing.
 
 ## ✨ Features
 
-- **Multi-Source News Fetching**: Integration with NewsAPI for finance and tech news
-- **AI Summarization**: Local LLM integration (Ollama) for article summaries
-- **Multi-Language Support**: English, Spanish, and Arabic with translation capabilities
-- **Smart Filtering**: Category-based filtering (Finance, Technology) with search functionality
-- **Interactive CLI**: Easy-to-use command-line interfaces for article management
-- **JSON Export**: Generate structured newsletters in JSON format
-- **Scalable Architecture**: Designed for easy expansion to multiple APIs and web scrapers
+- **RSS Feed Management**: Add, manage, and monitor RSS news feeds
+- **Multi-Language Support**: English, Spanish, Portuguese, French, Arabic, Chinese, Japanese
+- **Web Interface**: React-based dashboard for feed and article management
+- **REST API**: Fastify-powered backend with OpenAPI documentation
+- **Type Safety**: Full TypeScript with Zod validation throughout
+- **Modern Stack**: Monorepo with Next.js frontend and Fastify API
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
-- npm or pnpm
-- NewsAPI key (free at [newsapi.org](https://newsapi.org))
-- Optional: Ollama for AI summaries
+- Node.js 20+ LTS
+- pnpm (recommended) or npm
+- Git
 
 ### Installation
 
 1. **Clone and install dependencies:**
 ```bash
-npm install
+git clone <your-repo>
+cd "GlobalNews Letter"
+pnpm install
 ```
 
 2. **Set up environment:**
-Create `.local.env` with your NewsAPI key:
-```env
-NEWSAPI_API_KEY="your_api_key_here"
-# Optional LLM settings
-LLM_API_URL="http://localhost:11434"
-LLM_MODEL="codellama:7b"
+Copy and configure environment files:
+```bash
+# API environment (optional - has defaults)
+cp apps/api/.env.example apps/api/.env
+
+# Frontend environment (optional - has defaults)  
+cp apps/frontend/.env.example apps/frontend/.env
 ```
 
-3. **Optional - Set up Ollama for AI summaries:**
+Default configuration works out of the box for development.
+
+### Development
+
+#### Start Development Servers
+
+**Option 1 - Start Everything (Recommended):**
 ```bash
-# Install Ollama (see ollama.ai)
-ollama pull codellama:7b
-# Ollama runs automatically on localhost:11434
+pnpm dev:all
+# Starts both API (localhost:3333) and Frontend (localhost:3000)
+# Uses concurrently with colored output for easy monitoring
 ```
 
-### Usage
+**Option 2 - Start Individually:**
 
-#### 1. Fetch Articles
+**Terminal 1 - API Server:**
 ```bash
-npm run fetch
-```
-Interactive CLI for:
-- Fetching articles by category (Finance/Tech)
-- Getting top headlines
-- Searching with keywords
-- Viewing stored articles
-- Database statistics
-
-#### 2. Generate Newsletter
-```bash
-npm run generate
-```
-Interactive CLI for:
-- Selecting articles for newsletter
-- Choosing output language
-- Generating JSON newsletters
-- Translating articles
-- Managing selections
-
-#### 3. Test Services
-```bash
+cd apps/api
 npm run dev
+# API runs on http://localhost:3333
+# Health checks: /healthz and /readyz
 ```
-Check connectivity to NewsAPI and LLM services.
+
+**Terminal 2 - Frontend Server:**
+```bash
+cd apps/frontend  
+npm run dev
+# Web UI runs on http://localhost:3000
+```
+
+**Generate Contracts (when needed):**
+```bash
+pnpm contracts:gen
+# Regenerates OpenAPI schemas and TypeScript clients
+```
+
+#### Key Development URLs
+
+- **Frontend**: http://localhost:3000
+- **API**: http://localhost:3333
+- **API Health**: http://localhost:3333/healthz
+- **API Readiness**: http://localhost:3333/readyz
 
 ## 📁 Project Structure
 
 ```
 GlobalNews Letter/
-├── src/
-│   ├── cli/                    # Command-line interfaces
-│   │   ├── fetch.ts           # Article fetching CLI
-│   │   └── generate.ts        # Newsletter generation CLI
-│   ├── config/                # Configuration and constants
-│   │   └── index.ts           # App configuration
-│   ├── providers/             # External API providers
-│   │   └── newsapi.ts         # NewsAPI integration
-│   ├── services/              # Core business logic
-│   │   ├── articles.ts        # Article management
-│   │   ├── database.ts        # SQLite database service
-│   │   ├── llm.ts             # Local LLM integration
-│   │   └── newsletter.ts      # Newsletter generation
-│   ├── types/                 # TypeScript type definitions
-│   │   └── index.ts           # Shared types and schemas
-│   └── index.ts               # Main application entry
-├── data/                      # SQLite database files
-├── output/                    # Generated newsletters
-├── .local.env                 # Environment variables
-├── package.json              # Dependencies and scripts
-└── tsconfig.json             # TypeScript configuration
+├── apps/
+│   ├── api/                   # Fastify API server
+│   │   ├── src/
+│   │   │   ├── database/      # SQLite connection and initialization
+│   │   │   ├── routes/        # API endpoints (feeds, articles)
+│   │   │   ├── middleware/    # CORS, rate limiting, logging
+│   │   │   └── server.ts      # Main server setup
+│   │   ├── data/              # SQLite database files
+│   │   └── package.json
+│   └── frontend/              # Next.js React app
+│       ├── src/
+│       │   ├── components/    # React components (feeds, articles)
+│       │   ├── lib/           # API client and utilities
+│       │   └── app/           # Next.js App Router pages
+│       └── package.json
+├── packages/
+│   └── contracts/             # Shared schemas and OpenAPI
+│       ├── src/schemas/       # Zod validation schemas
+│       ├── openapi.json       # Generated OpenAPI spec
+│       └── openapi.gen.ts     # Generated TypeScript client
+├── CLAUDE.md                  # Development guidelines
+├── package.json               # Monorepo configuration
+└── pnpm-workspace.yaml        # Workspace configuration
+```
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+# From root - runs tests for all workspaces
+pnpm -r test
+
+# Or run tests individually
+cd apps/api && npm test
+cd apps/frontend && npm test
+```
+
+### API Testing with curl
+
+**Health Checks:**
+```bash
+curl http://localhost:3333/healthz
+curl http://localhost:3333/readyz
+```
+
+**Create a Feed:**
+```bash
+curl -X POST http://localhost:3333/feeds \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "TechCrunch",
+    "url": "https://techcrunch.com/feed/",
+    "language": "English",
+    "region": "United States",
+    "category": "Technology", 
+    "type": "News"
+  }'
+```
+
+**List Feeds:**
+```bash
+curl http://localhost:3333/feeds
+```
+
+**List Articles:**
+```bash
+curl http://localhost:3333/articles
+```
+
+### Quality Gates
+```bash
+# Type check  
+pnpm typecheck
+
+# Contract generation
+pnpm contracts:gen
 ```
 
 ## 🔧 Configuration
 
-### Environment Variables (.local.env)
+### Environment Variables
 
+**API Server (.env):**
 ```env
-# Required
-NEWSAPI_API_KEY="your_newsapi_key"
-
-# Optional - API URLs
-NEWSAPI_BASE_URL="https://newsapi.org/v2"
-LLM_API_URL="http://localhost:11434"
-
-# Optional - Settings
-LLM_MODEL="codellama:7b"
-DATABASE_PATH="./data/articles.db"
-OUTPUT_DIR="./output"
+NODE_ENV=development
+PORT=3333
+DATABASE_URL="file:./data/news.db"
+CORS_ORIGINS="http://localhost:3000"
+RATE_LIMIT_RPS=10
 ```
 
-### Categories and Languages
+**Frontend (.env):**
+```env
+NEXT_PUBLIC_API_BASE_URL="http://localhost:3333"
+```
 
-**Supported Categories:**
-- Finance: banking, cryptocurrency, stock market, investment, economy
-- Technology: AI, software, startups, programming, tech companies
+### Supported Categories & Languages
 
-**Supported Languages:**
-- English
-- Spanish  
-- Arabic
+**Categories:**
+News, Technology, Finance, Science, Sports, Entertainment, Health, Travel, Education, Business, Politics, Gaming, Crypto, Lifestyle
 
-## 📊 Newsletter Output Format
+**Languages:**
+English, Spanish, Portuguese, French, Arabic, Chinese, Japanese
 
-Generated newsletters are saved as JSON files with this structure:
+## 🔌 API Endpoints
 
+### Feeds
+```
+GET    /feeds              # List all feeds (paginated)
+POST   /feeds              # Create new feed
+GET    /feeds/:id          # Get specific feed
+PUT    /feeds/:id          # Update feed
+DELETE /feeds/:id          # Delete feed
+```
+
+### Articles
+```
+GET    /articles           # List all articles (paginated)  
+POST   /articles           # Create new article
+GET    /articles/:id       # Get specific article
+PUT    /articles/:id       # Update article
+DELETE /articles/:id       # Delete article
+```
+
+### Health
+```
+GET    /healthz            # Health check (always returns 200)
+GET    /readyz             # Readiness check (validates database)
+```
+
+### Example API Responses
+
+**Feed Object:**
 ```json
 {
-  "generatedAt": "2024-08-24T10:30:00.000Z",
-  "language": "english",
-  "totalArticles": 5,
-  "metadata": {
-    "categories": ["finance", "tech"],
-    "sources": ["TechCrunch", "Bloomberg", "Reuters"],
-    "dateRange": {
-      "earliest": "2024-08-23T12:00:00.000Z",
-      "latest": "2024-08-24T09:45:00.000Z"
-    }
-  },
-  "articlesByCategory": {
-    "finance": [
-      {
-        "title": "Market Update: Tech Stocks Rally",
-        "author": "John Doe",
-        "source": "Bloomberg",
-        "publishedAt": "2024-08-24T09:45:00.000Z",
-        "summary": "AI-generated summary of the article...",
-        "link": "https://example.com/article1"
-      }
-    ],
-    "tech": [...]
-  }
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "TechCrunch",
+  "url": "https://techcrunch.com/feed/",
+  "language": "English",
+  "region": "United States", 
+  "category": "Technology",
+  "type": "News",
+  "is_active": true,
+  "created_at": "2024-08-29T10:30:00.000Z",
+  "updated_at": "2024-08-29T10:30:00.000Z"
+}
+```
+
+**Article Object:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "feed_id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "AI Breakthrough in Language Models",
+  "description": "New developments in artificial intelligence...",
+  "content": "Full article content here...",
+  "url": "https://techcrunch.com/2024/08/29/ai-breakthrough/",
+  "published_at": "2024-08-29T09:45:00.000Z",
+  "scraped_at": "2024-08-29T10:30:00.000Z",
+  "created_at": "2024-08-29T10:30:00.000Z"
 }
 ```
 
@@ -167,120 +252,91 @@ Generated newsletters are saved as JSON files with this structure:
 
 ### Available Commands
 
-| Category | Command | Purpose | Options/Arguments |
-|----------|---------|---------|-------------------|
-| **📰 Article Management** | | | |
-| | `npm run fetch` | Interactive CLI for fetching articles from NewsAPI | Categories: Finance/Tech, Search keywords, Top headlines |
-| | `npm run generate` | Interactive newsletter generation CLI | Language selection, Article filtering, JSON export |
-| **🔍 RSS Feed Tools** | | | |
-| | `npm run rss-test <url>` | Test and validate RSS feed URLs | RSS URL as argument |
-| | `npm run google-rss` | Generate Google News RSS URLs | Interactive: country, language, topics/search |
-| | `npm run poll [command]` | RSS feed polling and monitoring | `start`, `status`, `recent [N]`, `test` |
-| **🏥 Feed Health Monitoring** | | | |
-| | `npm run health check <feed-id>` | Comprehensive health analysis of a feed | `--detailed`, `--format=json\|table` |
-| | `npm run health summary` | Health overview of all feeds | `--format=json\|table\|summary` |
-| | `npm run health dashboard` | Live health monitoring dashboard | Real-time feed status |
-| | `npm run health alerts` | Show active health alerts | `--severity=info\|warning\|error\|critical` |
-| | `npm run health resolve <alert-id>` | Resolve specific health alert | Alert ID as argument |
-| | `npm run health volume <feed-id>` | Analyze volume metrics for feed | `--days=N` for historical range |
-| | `npm run health quality <feed-id>` | Analyze content quality metrics | Content completeness, readability |
-| | `npm run health credibility <feed-id>` | Analyze feed credibility and authenticity | Author patterns, suspicious content |
-| | `npm run health technical <feed-id>` | Technical performance analysis | Uptime, response times, errors |
-| | `npm run health ranking` | Rank feeds by health score | Shows top and bottom performers |
-| | `npm run health outliers` | Find feeds with unusual patterns | Statistical anomaly detection |
-| | `npm run health monitor` | Start continuous health monitoring | Background monitoring with alerts |
-| | `npm run health report` | Generate comprehensive health report | `--days=N` for report period |
-| **🔧 Development Tools** | | | |
-| | `npm run dev` | Development mode with file watching | Hot reload for development |
-| | `npm run build` | Build TypeScript to JavaScript | Production build |
-| | `npm run start` | Run compiled JavaScript application | Production start |
-| | `npm run lint` | Run ESLint code quality checks | Code style and quality |
-| | `npm run typecheck` | TypeScript type checking | Type validation without |
-| | `npm run test` | Run test suite | Unit and integration tests |
-
-### RSS Polling Commands Detail
-
-The `npm run poll` command supports multiple sub-commands:
-
+**Monorepo Root:**
 ```bash
-npm run poll                    # Start continuous RSS polling (default)
-npm run poll start             # Same as above - start polling service
-npm run poll status            # Show current polling status and database info
-npm run poll recent [N]        # Show N most recent articles (default: 10)
-npm run poll test              # Test RSS feed connection without polling
+pnpm install              # Install all dependencies
+pnpm dev:all              # Start API + Frontend servers  
+pnpm contracts:gen        # Generate OpenAPI schemas
+pnpm -r test              # Run tests in all workspaces
+pnpm typecheck            # Type check all code
 ```
 
-### Health Monitoring Commands Detail
-
-The `npm run health` command provides comprehensive feed health analysis:
-
-#### Core Health Commands
+**API Server (apps/api):**
 ```bash
-npm run health check us-tech-news              # Full health analysis
-npm run health summary --format=json           # JSON summary of all feeds
-npm run health dashboard                        # Interactive dashboard
+npm run dev               # Start development server
+npm run build             # Build for production
+npm run start             # Start production server  
+npm test                  # Run API tests
+npm run db:init           # Initialize database
 ```
 
-#### Alert Management
+**Frontend (apps/frontend):**
 ```bash
-npm run health alerts --severity=critical      # Show only critical alerts
-npm run health resolve alert-12345            # Resolve specific alert
+npm run dev               # Start development server
+npm run build             # Build for production
+npm run start             # Start production server
+npm test                  # Run frontend tests
 ```
-
-#### Specific Metric Analysis
-```bash
-npm run health volume us-tech --days=30       # 30-day volume analysis
-npm run health quality finance-feed           # Content quality assessment
-npm run health credibility news-source        # Authenticity analysis
-npm run health technical rss-feed-1           # Performance metrics
-```
-
-#### Analysis & Reporting
-```bash
-npm run health ranking                         # Rank all feeds by health
-npm run health outliers                        # Find statistically unusual feeds
-npm run health report --days=14               # 14-day comprehensive report
-npm run health monitor                         # Start continuous monitoring
-```
-
-### Configuration Options
-
-Many commands accept additional options:
-
-- `--format=table|json|summary` - Output format selection
-- `--days=N` - Historical data range (default: 7)
-- `--severity=level` - Filter alerts by severity level
-- `--detailed` - Show additional detailed metrics
-- `--resolve` - Auto-resolve alerts after displaying
 
 ### Architecture
 
-The system follows a modular architecture designed for scalability:
+Built following CLAUDE.md MVP principles:
 
-- **Providers**: Abstracted API integrations (NewsAPI, future sources)
-- **Services**: Core business logic with clear separation of concerns
-- **CLI**: User-friendly interfaces for different workflows
-- **Database**: SQLite for MVP, easily upgradeable to PostgreSQL
-- **Types**: Comprehensive TypeScript types with Zod validation
+- **Contract-First**: OpenAPI schemas generate TypeScript clients
+- **Type Safety**: Zod validation at all API boundaries  
+- **Structured Errors**: RFC 7807 problem+json error responses
+- **Health Monitoring**: /healthz and /readyz endpoints
+- **Graceful Shutdown**: Proper cleanup on SIGTERM/SIGINT
+- **Logging**: Structured JSON logs with request IDs
+- **Rate Limiting**: Per-IP token bucket protection
 
-## 🔮 Future Enhancements
+### Database Schema
 
-- **Multiple News Sources**: RSS feeds, additional APIs
-- **Web Scraping**: Custom scrapers for specific sources
-- **Advanced AI**: Better summarization and content analysis
-- **Email Delivery**: SMTP integration for newsletter distribution
-- **Web Dashboard**: React-based management interface
-- **Scheduling**: Automated newsletter generation
-- **Analytics**: Click tracking and engagement metrics
+**feeds table:**
+- `id` (TEXT PRIMARY KEY) - UUID
+- `name` (TEXT) - Feed display name
+- `url` (TEXT UNIQUE) - RSS feed URL
+- `language` (TEXT) - Content language
+- `region` (TEXT) - Geographic region
+- `category` (TEXT) - Content category
+- `type` (TEXT) - Content type
+- `is_active` (BOOLEAN) - Active status
+- `created_at` (TEXT) - Creation timestamp
+- `updated_at` (TEXT) - Last update timestamp
 
-## 🤝 Contributing
+**articles table:**
+- `id` (TEXT PRIMARY KEY) - UUID
+- `feed_id` (TEXT) - Foreign key to feeds.id
+- `title` (TEXT) - Article title
+- `description` (TEXT) - Article summary
+- `content` (TEXT) - Full article content
+- `url` (TEXT UNIQUE) - Article URL
+- `published_at` (TEXT) - Original publish date
+- `scraped_at` (TEXT) - When scraped
+- `created_at` (TEXT) - Database creation time
 
-This is an MVP designed for rapid iteration. The codebase follows the two-model development approach outlined in CLAUDE-2.md for efficient scaling.
+## 🚧 Current Status
+
+**Completed:**
+✅ REST API with full CRUD operations  
+✅ React web interface with feed/article management  
+✅ Type-safe client generation from OpenAPI  
+✅ SQLite database with proper indexing  
+✅ Unit tests for all API endpoints  
+✅ Health monitoring and graceful shutdown  
+✅ CORS and rate limiting  
+
+**Next Steps:**
+- RSS feed parsing and article scraping
+- Automated feed polling scheduler
+- Article deduplication and content analysis
+- Email newsletter generation
+- User authentication and feed subscriptions
 
 ## 📄 License
 
-MIT License - See LICENSE file for details.
+MIT License
 
 ---
 
-**Built with TypeScript, SQLite, and modern Node.js practices for reliability and scalability.**
+**Built with TypeScript, Next.js, Fastify, and SQLite following MVP-first development principles.**

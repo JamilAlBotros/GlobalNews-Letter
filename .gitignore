@@ -4,11 +4,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
+pnpm-lock.yaml
 
 # Build outputs
 dist/
 build/
 *.tsbuildinfo
+.next/
+out/
 
 # Environment variables
 .env
@@ -27,6 +30,9 @@ data/
 output/
 newsletters/
 *.json
+
+# Test files
+test-*.js
 
 # IDE and editor files
 .vscode/
@@ -72,6 +78,9 @@ coverage/
 tmp/
 temp/
 
+# Workspace files
+pnpm-workspace.yaml
+
 # MacOS
 .AppleDouble
 .LSOverride
@@ -100,3 +109,39 @@ $RECYCLE.BIN/
 *.bak
 *.backup
 *.old
+
+# MCP directory
+mcp/
+
+# Claude Code
+.claude-code/
+
+# Additional IDE files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/c_cpp_properties.json
+.vscode/compileCommands_Default.json
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Cache and temporary files
+.cache/
+.parcel-cache/
+.next/cache/
+*.cache
+*.tmp
+
+# Hot reload
+.hot-reload/

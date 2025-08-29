@@ -1,6 +1,8 @@
-import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
+import { OpenAPIRegistry, OpenApiGeneratorV3, extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { writeFileSync } from "node:fs";
 import { z } from "zod";
+
+extendZodWithOpenApi(z);
 import { Feed, CreateFeedInput, UpdateFeedInput } from "./schemas/feed.js";
 import { Article, CreateArticleInput, UpdateArticleInput } from "./schemas/article.js";
 import { PaginationQuery, PaginatedResponse, HealthCheck, ReadinessCheck, ErrorResponse } from "./schemas/common.js";

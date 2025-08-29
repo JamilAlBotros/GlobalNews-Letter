@@ -1,0 +1,49 @@
+From,Source,URL,Validation Status,Validation Message
+Morning Brew,http://988lifeline.org/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,http://twitter.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,http://www.linkedin.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://abcnews.go.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://apnews.com/,https://apnews.com/index.rss,Invalid,URL Error: 401 Client Error: Unauthorized for url: https://apnews.com/index.rss
+Morning Brew,https://deepsky.ai/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://finance.yahoo.com/,https://finance.yahoo.com/rss/,Valid,Valid RSS Feed
+Morning Brew,https://findahelpline.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://go.skimresources.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://heloc-eligibility.secure-clix.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://media0.giphy.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://morningbrewdaily.typeform.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://morningbrewinc.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://newsletter.bossyshow.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://newsletter.moneywithkatie.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://openai.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://shop.morningbrew.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://srv.buysellads.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://tmobile.prf.hn/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://twitter.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://variety.com/,https://variety.com/feed/,Valid,Valid RSS Feed
+Morning Brew,https://www.billboard.com/,https://www.billboard.com/feed/,Valid,Valid RSS Feed
+Morning Brew,https://www.bloomberg.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.cbsnews.com/,https://www.cbsnews.com/latest/rss/main,Valid,Valid RSS Feed
+Morning Brew,https://www.cfobrew.com/,https://www.cfobrew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.cnbc.com/,https://www.cnbc.com/feed/,Invalid,Not a valid RSS feed. Reason: Unknown parsing error
+Morning Brew,https://www.facebook.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.finance.yahoo.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.healthcare-brew.com/,https://www.healthcare-brew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.hollywoodreporter.com/,https://www.hollywoodreporter.com/feed/,Valid,Valid RSS Feed
+Morning Brew,https://www.hr-brew.com/,https://www.hr-brew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.instagram.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.itbrew.com/,https://www.itbrew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.linkedin.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.marketingbrew.com/,https://www.marketingbrew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.marketingdive.com/,https://www.marketingdive.com/feeds/news/,Valid,Valid RSS Feed
+Morning Brew,https://www.morningbrew.com/,https://www.morningbrew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.nbcnews.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.politico.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.retailbrew.com/,https://www.retailbrew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.revenuebrew.com/,https://www.revenuebrew.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.rollingstone.com/,https://www.rollingstone.com/feed/,Valid,Valid RSS Feed
+Morning Brew,https://www.thecity.nyc/,https://www.thecity.nyc/feed/,Valid,Valid RSS Feed
+Morning Brew,https://www.theplaybookmb.com/,https://www.theplaybookmb.com/feed.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.theverge.com/,https://www.theverge.com/rss/index.xml,Valid,Valid RSS Feed
+Morning Brew,https://www.tiktok.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?
+Morning Brew,https://www.visualcapitalist.com/,https://www.visualcapitalist.com/feed/,Invalid,URL Error: 403 Client Error: Forbidden for url: https://www.visualcapitalist.com/feed/
+Morning Brew,https://www.youtube.com/,No RSS feed found,Invalid,URL Error: Invalid URL 'No RSS feed found': No scheme supplied. Perhaps you meant https://No RSS feed found?

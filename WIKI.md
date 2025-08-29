@@ -28,6 +28,7 @@ GlobalNews Letter is a multilingual RSS feed aggregation and translation system 
 - **Finance** - Financial news, market updates, investment analysis
 - **Tech** - Technology news, startup updates, product launches
 - **Health** - Medical news, research updates, wellness content
+- **crypto** - Crypto news
 - **General** - Broader news coverage
 
 ---

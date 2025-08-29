@@ -17,6 +17,7 @@ build/
 !.env.example
 
 # Database files
+tools/
 data/
 *.db
 *.sqlite

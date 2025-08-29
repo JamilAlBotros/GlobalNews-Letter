@@ -1,27 +1,29 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { 
-  FeedQuerySchema,
+import { SimpleEnhancedDatabaseService } from '../../services/simple-enhanced-database.js';
+// import { TranslationPipeline } from '../../services/translation-pipeline.js';
+// import { RSSProcessor } from '../../services/rss-processor.js';
+// import { HealthAnalyticsService } from '../../services/health-analytics.js';
+// import { LLMService } from '../../services/llm-service.js';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  // Feed Source Schemas
+  FeedSourceSchema,
   CreateFeedSourceSchema,
   UpdateFeedSourceSchema,
-  CreateFeedInstanceSchema,
-  UpdateFeedInstanceSchema,
-  CreateTranslationRequestSchema,
-  ArticleQuerySchema,
-  TranslationQuerySchema,
-  PaginatedResponseSchema,
-  FeedSourceSchema,
+  // Feed Instance Schemas
   FeedInstanceSchema,
+  CreateFeedInstanceSchema,
+  FeedQuerySchema,
+  // Article Schemas
   ArticleOriginalSchema,
+  ArticleQuerySchema,
   ArticleTranslationSchema,
+  TranslationQuerySchema,
+  CreateTranslationRequestSchema,
+  // Response Schemas
+  PaginatedResponseSchema,
   HealthCheckResponseSchema
 } from '../schemas/enhanced-schemas.js';
-import { EnhancedDatabaseService } from '../../services/enhanced-database.js';
-import { FeedManager } from '../../services/feed-manager.js';
-import { TranslationPipeline } from '../../services/translation-pipeline.js';
-import { HealthAnalyticsService } from '../../services/health-analytics.js';
-import { LLMService } from '../../services/llm-service.js';
-import { RSSProcessor } from '../../services/rss-processor.js';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Enhanced RSS Feed and Translation API Routes
@@ -29,14 +31,53 @@ import { v4 as uuidv4 } from 'uuid';
  */
 
 const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
-  // Initialize services
-  const db = new EnhancedDatabaseService();
-  const llmService = new LLMService();
-  const rssProcessor = new RSSProcessor(db, llmService);
-  const translationPipeline = new TranslationPipeline(db, llmService);
-  const healthAnalytics = new HealthAnalyticsService(db);
-
+  console.log('🚀 Loading enhanced feeds routes...');
+  
+  // Initialize services with explicit database path
+  console.log('📊 Initializing simplified database service...');
+  const dbPath = './data/enhanced-rss.db';
+  console.log('📊 Database path:', dbPath);
+  const db = new SimpleEnhancedDatabaseService(dbPath);
   await db.initialize();
+  console.log('✅ Database initialized');
+  
+  // Test database connection immediately after initialization
+  try {
+    console.log('🧪 Testing database connection...');
+    const testSources = await db.getFeedSources();
+    console.log(`🧪 Test query found ${testSources.length} sources`);
+    if (testSources.length > 0) {
+      console.log('🧪 Sample source:', testSources[0].name);
+    }
+  } catch (testError) {
+    console.error('❌ Database test failed:', testError);
+  }
+
+  // Note: Other services commented out to simplify debugging
+  // const llmService = new LLMService();
+  // const translationPipeline = new TranslationPipeline(db, llmService);
+  // const rssProcessor = new RSSProcessor(db, llmService);
+  // const healthAnalytics = new HealthAnalyticsService(db);
+  
+  console.log('✅ All services initialized');
+  
+  try {
+    
+    // Debug route - moved inside the try block
+    fastify.get('/debug', async (request, reply) => {
+      console.log('🧪 Debug route hit!');
+      const sources = await db.getFeedSources();
+      return { 
+        message: 'Debug route working', 
+        timestamp: new Date().toISOString(),
+        sourceCount: sources.length,
+        firstSource: sources[0] || null
+      };
+    });
+  } catch (error) {
+    console.error('💥 Error initializing enhanced routes:', error);
+    throw error;
+  }
 
   // ============================================
   // FEED SOURCE MANAGEMENT
@@ -51,27 +92,64 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
       }
     }
   }, async (request, reply) => {
-    const query = request.query as any;
-    
-    const sources = await db.getFeedSources({
-      language: query.language,
-      category: query.category,
-      activeOnly: query.active
-    });
-
-    const startIndex = (query.page - 1) * query.limit;
-    const endIndex = startIndex + query.limit;
-    const paginatedSources = sources.slice(startIndex, endIndex);
-
-    return {
-      data: paginatedSources,
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total: sources.length,
-        totalPages: Math.ceil(sources.length / query.limit)
+    try {
+      const query = request.query as any;
+      console.log('🔍 Getting feed sources with query:', query);
+      
+      // Debug database connection
+      console.log('📊 Database instance:', !!db);
+      
+      const sources = await db.getFeedSources();
+      console.log(`📊 Found ${sources.length} total sources`);
+      
+      // Debug first few sources if they exist
+      if (sources.length > 0) {
+        console.log('📊 First source:', sources[0].name);
+      } else {
+        console.log('⚠️ No sources found in getFeedSources()');
       }
-    };
+      
+      // Apply filters
+      let filteredSources = sources;
+      if (query.language) {
+        filteredSources = filteredSources.filter((s: any) => s.source_language === query.language);
+      }
+      if (query.category) {
+        filteredSources = filteredSources.filter((s: any) => s.content_category === query.category);
+      }
+      if (query.provider) {
+        filteredSources = filteredSources.filter((s: any) => s.provider_type === query.provider);
+      }
+      if (query.active !== undefined) {
+        filteredSources = filteredSources.filter((s: any) => s.is_active === query.active);
+      }
+      
+      console.log(`🔽 Filtered to ${filteredSources.length} sources`);
+
+      const page = query.page;
+      const limit = query.limit;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedSources = filteredSources.slice(startIndex, endIndex);
+      
+      console.log(`📄 Paginated: ${paginatedSources.length} sources (page ${page}, limit ${limit})`);
+
+      const result = {
+        data: paginatedSources,
+        pagination: {
+          page: page,
+          limit: limit,
+          total: filteredSources.length,
+          totalPages: Math.ceil(filteredSources.length / limit)
+        }
+      };
+      
+      console.log(`📤 Returning result with ${result.data.length} items`);
+      return result;
+    } catch (error) {
+      console.error('💥 Error in /feeds/sources:', error);
+      throw error;
+    }
   });
 
   // POST /api/enhanced/feeds/sources - Create new feed source  
@@ -274,7 +352,8 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
   // TRANSLATION MANAGEMENT
   // ============================================
 
-  // POST /api/v2/translations - Create translation jobs
+  // POST /api/v2/translations - Create translation jobs (DISABLED - service not initialized)
+  /*
   fastify.post('/translations', {
     schema: {
       body: CreateTranslationRequestSchema,
@@ -331,7 +410,7 @@ const enhancedFeedsRoutes: FastifyPluginAsync = async (fastify, opts) => {
     );
 
     // Transform to translation format
-    const translations = articles.map(article => ({
+    const translations = articles.map((article: any) => ({
       id: article.translation_id,
       original_article_id: article.id,
       target_language: query.target_language,

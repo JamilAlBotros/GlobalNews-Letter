@@ -1,0 +1,161 @@
+rss_url,source_language,primary_region,content_category,content_type
+https://rss.cnn.com/rss/cnn_topstories.rss,English,Global,News,News
+https://feeds.bbci.co.uk/news/rss.xml,English,United Kingdom,News,News
+https://www.washingtonpost.com/rss/,English,United States,News,News
+https://www.theguardian.com/world/rss,English,Global,News,News
+https://feeds.skynews.com/feeds/rss/home.xml,English,United Kingdom,News,News
+https://www.aljazeera.com/xml/rss/all.xml,English,Middle East,News,News
+https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml,English,United States,News,News
+https://www.npr.org/rss/rss.php?id=1001,English,United States,News,News
+https://techcrunch.com/feed/,English,Global,Technology,News
+https://www.wired.com/feed/rss,English,Global,Technology,Analysis
+https://rss.slashdot.org/Slashdot/slashdotMain,English,Global,Technology,News
+https://feeds.arstechnica.com/arstechnica/index,English,Global,Technology,Analysis
+https://www.engadget.com/rss.xml,English,Global,Technology,News
+https://www.theverge.com/rss/index.xml,English,Global,Technology,News
+https://www.cnbc.com/id/10000664/device/rss/rss.html,English,Global,Finance,News
+https://www.ft.com/rss/home/uk,English,United Kingdom,Finance,News
+https://www.economist.com/finance-and-economics/rss.xml,English,Global,Finance,Analysis
+https://feeds.bloomberg.com/markets/news.rss,English,Global,Finance,News
+https://www.nasdaq.com/feed/rss/nasdaq-original,English,United States,Finance,News
+https://www.forbes.com/investing/feed/,English,Global,Finance,News
+https://www.nasa.gov/rss/dyn/breaking_news.rss,English,Global,Science,News
+https://www.sciencedaily.com/rss/all.xml,English,Global,Science,Research
+https://www.nature.com/nature.rss,English,Global,Science,Research
+https://science.sciencemag.org/rss/current.xml,English,Global,Science,Research
+https://www.newscientist.com/feed/home/?cmpid=RSS,English,Global,Science,News
+https://www.scientificamerican.com/rss/all/,English,Global,Science,Analysis
+https://feeds.nbcnews.com/nbcnews/public/sports,English,United States,Sports,News
+https://feeds.bbci.co.uk/sport/rss.xml,English,Global,Sports,News
+https://www.espn.com/espn/rss/news,English,Global,Sports,News
+https://www.skysports.com/rss/11095,English,United Kingdom,Sports,News
+https://www.foxsports.com/rss/feed,English,United States,Sports,News
+https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml,English,United States,Sports,News
+https://variety.com/feed/,English,Global,Entertainment,News
+https://www.hollywoodreporter.com/feed,English,United States,Entertainment,News
+https://feeds.billboard.com/billboard/news,English,Global,Entertainment,News
+https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml,English,United States,Entertainment,News
+https://www.eonline.com/news/rss,English,United States,Entertainment,News
+https://www.rollingstone.com/feed/,English,United States,Entertainment,News
+https://www.webmd.com/rss/webmd_rss_091e9c5e6e033402,English,Global,Health,News
+https://rss.medicalnewstoday.com/featurednews.xml,English,Global,Health,News
+https://www.healthline.com/rss/all,English,Global,Health,News
+https://www.health.com/feed/rss,English,United States,Health,News
+https://www.mayoclinic.org/rss/news,English,Global,Health,News
+https://feeds.bbci.co.uk/news/health/rss.xml,English,United Kingdom,Health,News
+https://www.lonelyplanet.com/news/feed,English,Global,Travel,Blog
+https://www.travelandleisure.com/feed,English,Global,Travel,News
+https://www.cntraveler.com/feed/rss,English,Global,Travel,Blog
+https://www.nationalgeographic.com/travel/feeds/travel-news-rss,English,Global,Travel,News
+https://www.fodors.com/rss/all.xml,English,Global,Travel,Blog
+https://www.afar.com/rss/featured,English,Global,Travel,Blog
+https://feeds.feedburner.com/TheEducationBlog,English,Global,Education,Blog
+https://www.edutopia.org/feed,English,United States,Education,Blog
+https://www.chronicle.com/rss/all,English,United States,Education,News
+https://www.edsurge.com/feeds/all,English,Global,Education,News
+https://blogs.edweek.org/edweek/index.xml,English,United States,Education,Blog
+https://www.insidehighered.com/rss.xml,English,United States,Education,News
+https://www.wsj.com/xml/rss/3_7014.xml,English,Global,Business,News
+https://feeds.harvardbusiness.org/harvardbusiness,English,Global,Business,Analysis
+https://www.inc.com/rss/,English,United States,Business,News
+https://www.entrepreneur.com/latest.rss,English,Global,Business,News
+https://rss.nytimes.com/services/xml/rss/nyt/Business.xml,English,United States,Business,News
+https://www.fastcompany.com/rss,English,Global,Business,News
+https://feeds.a.dj.com/rss/RSSWorldNews.xml,English,Global,News,News
+https://feeds.bbci.co.uk/news/world/rss.xml,English,Global,News,News
+https://rss.nytimes.com/services/xml/rss/nyt/World.xml,English,United States,News,News
+https://www.washingtonpost.com/world/rss/,English,United States,News,News
+https://feeds.reuters.com/reuters/worldNews,English,Global,News,News
+https://www.aljazeera.com/xml/rss/all.xml,English,Middle East,News,News
+https://coindesk.com/arc/outboundfeeds/rss/,English,Global,Crypto,News
+https://cointelegraph.com/rss,English,Global,Crypto,News
+https://decrypt.co/feed,English,Global,Crypto,News
+https://www.coinbureau.com/feed/,English,Global,Crypto,Analysis
+https://cryptobriefing.com/feed/,English,Global,Crypto,News
+https://blog.ethereum.org/feed.xml,English,Global,Crypto,Blog
+https://www.foodnetwork.com/recipes.rss,English,United States,Lifestyle,Tutorial
+https://www.epicurious.com/feed/rss,English,Global,Lifestyle,Recipe
+https://www.bonappetit.com/feed/rss,English,United States,Lifestyle,Blog
+https://www.allrecipes.com/rss,English,Global,Lifestyle,Recipe
+https://www.eater.com/rss/index.xml,English,United States,Lifestyle,News
+https://www.delish.com/rss/all.xml/,English,United States,Lifestyle,Recipe
+https://www.vogue.com/feed/rss,English,Global,Lifestyle,News
+https://www.elle.com/rss/all.xml/,English,Global,Lifestyle,News
+https://www.gq.com/feed/rss,English,Global,Lifestyle,News
+https://www.cosmopolitan.com/rss/all.xml/,English,Global,Lifestyle,News
+https://www.instyle.com/feeds/all/instyle.com/all,English,United States,Lifestyle,News
+https://www.harpersbazaar.com/rss/all.xml/,English,Global,Lifestyle,News
+https://feeds.feedburner.com/homedesigning,English,Global,Lifestyle,Blog
+https://www.apartmenttherapy.com/main.rss,English,Global,Lifestyle,Blog
+https://lifehacker.com/rss,English,Global,Lifestyle,Blog
+https://www.wikihow.com/feed.rss,English,Global,Lifestyle,Tutorial
+https://www.parents.com/feed/,English,United States,Lifestyle,News
+https://www.realsimple.com/feeds/all/realsimple/all,English,United States,Lifestyle,News
+https://feeds.feedburner.com/politico/rss/politicopicks,English,United States,Politics,News
+https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml,English,United States,Politics,News
+https://www.washingtonpost.com/politics/rss/,English,United States,Politics,News
+https://feeds.thehill.com/thehill/news,English,United States,Politics,News
+https://www.politico.eu/feed/,English,Europe,Politics,News
+https://www.theguardian.com/politics/rss,English,United Kingdom,Politics,News
+https://www.androidauthority.com/feed,English,Global,Technology,News
+https://9to5mac.com/feed/,English,Global,Technology,News
+https://www.macrumors.com/macrumors.xml,English,Global,Technology,News
+https://www.zdnet.com/news/rss.xml,English,Global,Technology,News
+https://venturebeat.com/feed/,English,Global,Technology,News
+https://www.gizmodo.com.au/feed/,English,Australia,Technology,News
+https://gamerant.com/feed/,English,Global,Gaming,News
+https://feeds.feedburner.com/kotaku/full,English,Global,Gaming,News
+https://www.polygon.com/rss/index.xml,English,Global,Gaming,News
+https://www.eurogamer.net/?format=rss,English,Europe,Gaming,News
+https://www.gameinformer.com/rss.xml,English,Global,Gaming,News
+https://www.pcgamer.com/rss/,English,Global,Gaming,News
+https://casadevall.substack.com/feed,English,Global,Finance,Blog
+https://www.marketwatch.com/rss/topstories,English,Global,Finance,News
+https://www.moneycontrol.com/rss/business.xml,English,India,Finance,News
+https://www.reuters.com/business/finance/rssfeeds/,English,Global,Finance,News
+https://www.benzinga.com/feeds/market-overview/feed,English,Global,Finance,News
+https://seekingalpha.com/market_currents.xml,English,Global,Finance,News
+https://www.reddit.com/r/science/.rss,English,Global,Science,News
+https://phys.org/rss-feed/,English,Global,Science,News
+https://www.popsci.com/feed/,English,Global,Science,News
+https://blogs.scientificamerican.com/observations/feed/,English,Global,Science,Blog
+https://www.livescience.com/feeds/all,English,Global,Science,News
+https://cosmosmagazine.com/feed/,English,Global,Science,News
+https://www.reuters.com/world/sports/rssfeeds/,English,Global,Sports,News
+https://sports.yahoo.com/rss/,English,Global,Sports,News
+https://www.cbssports.com/rss/,English,United States,Sports,News
+https://theathletic.com/rss-feed/,English,Global,Sports,Analysis
+https://talksport.com/feed/,English,United Kingdom,Sports,News
+https://www.goal.com/feeds/en/news,English,Global,Sports,News
+https://tcrn.ch/2b8WqMA,English,Global,Technology,News
+https://www.techmeme.com/feed.xml,English,Global,Technology,News
+https://www.technologyreview.com/feed/,English,Global,Technology,Analysis
+https://www.techdirt.com/feed/,English,Global,Technology,Blog
+https://www.techhive.com/feed,English,Global,Technology,Review
+https://www.computerworld.com/index.rss,English,Global,Technology,News
+https://www.vice.com/en/rss/section/tech,English,Global,Technology,News
+https://www.makeuseof.com/feed/,English,Global,Technology,Tutorial
+https://www.tomsguide.com/feeds/all,English,Global,Technology,Review
+https://www.digitaltrends.com/feed/,English,Global,Technology,News
+https://appleinsider.com/rss/news/,English,Global,Technology,News
+https://feeds.maketecheasier.com/maketecheasier,English,Global,Technology,Tutorial
+https://www.xda-developers.com/feed/,English,Global,Technology,News
+https://nakedsecurity.sophos.com/feed/,English,Global,Technology,News
+https://www.darkreading.com/rss.xml,English,Global,Technology,News
+https://threatpost.com/feed/,English,Global,Technology,News
+https://krebsonsecurity.com/feed/,English,Global,Technology,Blog
+https://www.bleepingcomputer.com/feed/,English,Global,Technology,News
+https://www.schneier.com/blog/atom.xml,English,Global,Technology,Blog
+https://www.troyhunt.com/rss/,English,Global,Technology,Blog
+https://feeds.feedburner.com/TheHackersNews,English,Global,Technology,News
+https://www.reddit.com/r/netsec/.rss,English,Global,Technology,News
+https://www.helpnetsecurity.com/feed/,English,Global,Technology,News
+https://www.weforum.org/agenda/feed/,English,Global,Business,Analysis
+https://www.strategy-business.com/rss,English,Global,Business,Analysis
+https://www.mckinsey.com/insights/rss.aspx,English,Global,Business,Analysis
+https://knowledge.wharton.upenn.edu/feed/,English,Global,Business,Analysis
+https://hbr.org/rss/daily,English,Global,Business,Analysis
+https://feeds.feedburner.com/businessinsider,English,Global,Business,News
+https://www.forbes.com/business/feed/,English,Global,Business,News
+https://fortune.com/feed/,English,Global,Business,News
+https://www.businesstoday.in/rssfeeds/?id=home,English,India,Business,News

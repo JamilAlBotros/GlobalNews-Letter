@@ -1,6 +1,7 @@
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import { EnhancedRSSDatabaseManager } from '../database/enhanced-rss-schema.js';
+import { env } from '../config/environment.js';
 import type { 
   FeedSource,
   FeedInstance,
@@ -22,7 +23,8 @@ export class EnhancedDatabaseService {
   private dbRun: (sql: string, ...params: any[]) => Promise<sqlite3.RunResult>;
 
   constructor(dbPath?: string) {
-    this.dbManager = new EnhancedRSSDatabaseManager(dbPath);
+    const finalDbPath = dbPath || env.DATABASE_PATH;
+    this.dbManager = new EnhancedRSSDatabaseManager(finalDbPath);
     this.db = (this.dbManager as any).db; // Access private db instance
     
     // Promisify database methods

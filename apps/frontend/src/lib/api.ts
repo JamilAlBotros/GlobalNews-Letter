@@ -116,12 +116,28 @@ class ApiClient {
       return [] as T; // Return empty array for list endpoints
     }
     
+    // Handle case where API returns plain array instead of paginated response
+    if (Array.isArray(data) && endpoint.includes('/feeds/sources')) {
+      return { data, pagination: { page: 1, limit: 100, total: data.length, totalPages: 1 } } as T;
+    }
+    
     return data;
   }
 
   // Feed Sources
   async getFeedSources() {
-    return this.request('/api/enhanced/feeds/sources');
+    try {
+      const response = await this.request<{
+        data: FeedSourceType[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>('/api/enhanced/feeds/sources', {
+        query: { page: '1', limit: '100' }
+      });
+      return response?.data || [];
+    } catch (error) {
+      console.error('Failed to fetch feed sources:', error);
+      return [];
+    }
   }
 
   async createFeedSource(data: any, idempotencyKey?: string) {

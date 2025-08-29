@@ -90,47 +90,6 @@ export class LLMService {
   }
 
   /**
-   * Generate response using LLM (for translation pipeline)
-   */
-  async generateResponse(
-    prompt: string, 
-    options?: {
-      model?: string;
-      maxTokens?: number;
-      temperature?: number;
-    }
-  ): Promise<string> {
-    try {
-      const response = await fetch(`${this.apiUrl}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: options?.model || this.model,
-          prompt,
-          stream: false,
-          options: {
-            temperature: options?.temperature || 0.3,
-            top_p: 0.9,
-            max_tokens: options?.maxTokens || 500
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`LLM API request failed: ${response.status}`);
-      }
-
-      const data: any = await response.json();
-      return data.response?.trim() || 'No response generated';
-    } catch (error) {
-      console.warn('LLM service unavailable, using fallback');
-      return this.getFallbackResponse(prompt);
-    }
-  }
-
-  /**
    * Test LLM service connectivity
    */
   async testConnection(): Promise<boolean> {
@@ -206,17 +165,6 @@ export class LLMService {
     }
 
     throw new Error(`Unsupported LLM action: ${action}`);
-  }
-
-  /**
-   * Fallback response when LLM is not available
-   */
-  private getFallbackResponse(prompt: string): string {
-    if (prompt.toLowerCase().includes('translate')) {
-      return '{"title_translated": "Translation unavailable - LLM service offline", "description_translated": "Please configure LLM service", "summary_translated": "Translation service temporarily unavailable"}';
-    }
-    
-    return 'LLM service is not available. Please check configuration.';
   }
 
   /**

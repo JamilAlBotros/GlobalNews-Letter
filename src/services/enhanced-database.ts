@@ -1,14 +1,14 @@
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
-import { EnhancedRSSDatabaseManager } from '../database/enhanced-rss-schema.js';
 import { 
+  EnhancedRSSDatabaseManager,
   FeedSource,
   FeedInstance,
   ArticleOriginal,
   ArticleTranslation,
   FeedHealthMetric,
   TranslationJob
-} from '../api/schemas/enhanced-schemas.js';
+} from '../database/enhanced-rss-schema.js';
 
 /**
  * Enhanced Database Service with bi-directional translation support

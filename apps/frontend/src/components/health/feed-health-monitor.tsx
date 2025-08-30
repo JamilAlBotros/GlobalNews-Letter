@@ -1,16 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api';
-import { Activity, AlertTriangle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 
 export function FeedHealthMonitor() {
-  const { data: health, isLoading, error } = useQuery({
-    queryKey: ['health-analytics'],
-    queryFn: () => apiClient.getHealthAnalytics(),
-    refetchInterval: 30000,
-  });
-
   // Mock data for development
   const mockHealth = {
     feed_health: [
@@ -65,7 +57,8 @@ export function FeedHealthMonitor() {
     ],
   };
 
-  const healthData = health || { feed_health: [], system_alerts: [] };
+  // Use mock data since API is not implemented
+  const healthData = mockHealth;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -103,18 +96,6 @@ export function FeedHealthMonitor() {
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
-
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white rounded-lg shadow">

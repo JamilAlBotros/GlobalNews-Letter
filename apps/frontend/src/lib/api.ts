@@ -45,11 +45,61 @@ export const DatabaseWipeResponse = z.object({
   timestamp: z.string()
 });
 
+export const PollingStatus = z.object({
+  is_running: z.boolean(),
+  interval_minutes: z.number(),
+  last_poll_time: z.string().nullable(),
+  next_poll_time: z.string().nullable(),
+  total_polls: z.number(),
+  successful_polls: z.number(),
+  failed_polls: z.number(),
+  active_feeds_count: z.number()
+});
+
+export const PollTriggerResponse = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  feeds_processed: z.number(),
+  articles_found: z.number(),
+  timestamp: z.string()
+});
+
+export const ActiveFeedStatus = z.object({
+  feed_id: z.string(),
+  feed_name: z.string(),
+  feed_url: z.string(),
+  status: z.enum(["healthy", "warning", "critical", "unknown"]),
+  last_fetch_time: z.string().nullable(),
+  next_fetch_time: z.string().nullable(),
+  success_rate: z.number(),
+  consecutive_failures: z.number(),
+  total_fetches_24h: z.number(),
+  successful_fetches_24h: z.number(),
+  avg_response_time: z.number(),
+  articles_fetched_24h: z.number()
+});
+
+export const ActiveFeedsStatusResponse = z.object({
+  polling_active: z.boolean(),
+  feeds: z.array(ActiveFeedStatus),
+  summary: z.object({
+    total_active_feeds: z.number(),
+    healthy_feeds: z.number(),
+    warning_feeds: z.number(),
+    critical_feeds: z.number(),
+    avg_success_rate: z.number()
+  })
+});
+
 export type FeedType = z.infer<typeof Feed>;
 export type ArticleType = z.infer<typeof Article>;
 export type BackupType = z.infer<typeof Backup>;
 export type BackupResponseType = z.infer<typeof BackupResponse>;
 export type DatabaseWipeResponseType = z.infer<typeof DatabaseWipeResponse>;
+export type PollingStatusType = z.infer<typeof PollingStatus>;
+export type PollTriggerResponseType = z.infer<typeof PollTriggerResponse>;
+export type ActiveFeedStatusType = z.infer<typeof ActiveFeedStatus>;
+export type ActiveFeedsStatusResponseType = z.infer<typeof ActiveFeedsStatusResponse>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
 
@@ -238,6 +288,41 @@ class ApiClient {
     return this.request<DatabaseWipeResponseType>('/admin/database', {
       method: 'DELETE',
     });
+  }
+
+  // Polling Management endpoints
+  async getPollingStatus(): Promise<PollingStatusType> {
+    return this.request<PollingStatusType>('/polling/status');
+  }
+
+  async startPolling(options: { interval_minutes?: number } = {}): Promise<{ success: boolean; message: string; interval_minutes: number }> {
+    return this.request('/polling/start', {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  }
+
+  async stopPolling(): Promise<{ success: boolean; message: string }> {
+    return this.request('/polling/stop', {
+      method: 'POST',
+    });
+  }
+
+  async triggerPoll(): Promise<PollTriggerResponseType> {
+    return this.request<PollTriggerResponseType>('/polling/trigger', {
+      method: 'POST',
+    });
+  }
+
+  async updatePollingInterval(interval_minutes: number): Promise<{ success: boolean; message: string; interval_minutes: number; polling_restarted: boolean }> {
+    return this.request('/polling/interval', {
+      method: 'PUT',
+      body: JSON.stringify({ interval_minutes }),
+    });
+  }
+
+  async getActiveFeedsStatus(): Promise<ActiveFeedsStatusResponseType> {
+    return this.request<ActiveFeedsStatusResponseType>('/polling/feeds/status');
   }
 }
 

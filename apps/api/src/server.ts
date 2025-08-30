@@ -8,6 +8,7 @@ import { feedRoutes } from "./routes/feeds.js";
 import { articleRoutes } from "./routes/articles.js";
 import { backupRoutes } from "./routes/backup.js";
 import { pollingRoutes } from "./routes/polling.js";
+import { translationRoutes } from "./routes/translation.js";
 
 const app = Fastify({
   logger: {
@@ -100,6 +101,7 @@ await app.register(feedRoutes);
 await app.register(articleRoutes);
 await app.register(backupRoutes);
 await app.register(pollingRoutes);
+await app.register(translationRoutes);
 
 const start = async (): Promise<void> => {
   try {

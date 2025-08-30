@@ -91,6 +91,38 @@ export const ActiveFeedsStatusResponse = z.object({
   })
 });
 
+export const TranslationJob = z.object({
+  id: z.string(),
+  article_id: z.string(),
+  article_title: z.string(),
+  source_language: z.enum(["en", "es", "ar", "pt", "fr", "zh", "ja"]),
+  target_languages: z.string(),
+  status: z.enum(["queued", "processing", "completed", "failed", "cancelled"]),
+  priority: z.enum(["low", "normal", "high", "urgent"]),
+  progress_percentage: z.number(),
+  assigned_worker: z.string().nullable(),
+  retry_count: z.number(),
+  max_retries: z.number(),
+  estimated_completion: z.string().nullable(),
+  started_at: z.string().nullable(),
+  completed_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  error_message: z.string().nullable(),
+  word_count: z.number(),
+  cost_estimate: z.number().nullable()
+});
+
+export const TranslationJobsResponse = z.object({
+  data: z.array(TranslationJob),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    total_pages: z.number()
+  })
+});
+
 export type FeedType = z.infer<typeof Feed>;
 export type ArticleType = z.infer<typeof Article>;
 export type BackupType = z.infer<typeof Backup>;
@@ -100,6 +132,8 @@ export type PollingStatusType = z.infer<typeof PollingStatus>;
 export type PollTriggerResponseType = z.infer<typeof PollTriggerResponse>;
 export type ActiveFeedStatusType = z.infer<typeof ActiveFeedStatus>;
 export type ActiveFeedsStatusResponseType = z.infer<typeof ActiveFeedsStatusResponse>;
+export type TranslationJobType = z.infer<typeof TranslationJob>;
+export type TranslationJobsResponseType = z.infer<typeof TranslationJobsResponse>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
 
@@ -323,6 +357,53 @@ class ApiClient {
 
   async getActiveFeedsStatus(): Promise<ActiveFeedsStatusResponseType> {
     return this.request<ActiveFeedsStatusResponseType>('/polling/feeds/status');
+  }
+
+  // Translation Management endpoints
+  async getTranslationJobs(page: number = 1, limit: number = 20, filters: { status?: string; priority?: string; article_id?: string } = {}): Promise<TranslationJobType[]> {
+    try {
+      const query: any = { page, limit };
+      if (filters.status) query.status = filters.status;
+      if (filters.priority) query.priority = filters.priority;
+      if (filters.article_id) query.article_id = filters.article_id;
+      
+      const response = await this.request<TranslationJobsResponseType>('/translations/jobs', { query });
+      return response?.data || [];
+    } catch (error) {
+      console.error('Failed to fetch translation jobs:', error);
+      return [];
+    }
+  }
+
+  async getTranslationJob(id: string): Promise<TranslationJobType> {
+    return this.request<TranslationJobType>(`/translations/jobs/${id}`);
+  }
+
+  async createTranslationJob(data: { article_id: string; target_languages: string[]; priority?: string }): Promise<TranslationJobType> {
+    return this.request<TranslationJobType>('/translations/jobs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTranslationJob(id: string, data: { status?: string; priority?: string; progress_percentage?: number; assigned_worker?: string | null; error_message?: string | null }): Promise<TranslationJobType> {
+    return this.request<TranslationJobType>(`/translations/jobs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTranslationJob(id: string): Promise<void> {
+    return this.request(`/translations/jobs/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async batchUpdateTranslationJobs(job_ids: string[], updates: { status?: string; assigned_worker?: string | null }): Promise<{ success: boolean; updated_count: number; message: string }> {
+    return this.request('/translations/jobs/batch', {
+      method: 'PATCH',
+      body: JSON.stringify({ job_ids, ...updates }),
+    });
   }
 }
 

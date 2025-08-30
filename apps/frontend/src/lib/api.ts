@@ -26,8 +26,30 @@ export const Article = z.object({
   created_at: z.string(),
 });
 
+export const Backup = z.object({
+  filename: z.string(),
+  size: z.number(),
+  created_at: z.string(),
+  compressed: z.boolean()
+});
+
+export const BackupResponse = z.object({
+  filename: z.string(),
+  size: z.number(),
+  created_at: z.string()
+});
+
+export const DatabaseWipeResponse = z.object({
+  success: z.boolean(),
+  tables_cleared: z.array(z.string()),
+  timestamp: z.string()
+});
+
 export type FeedType = z.infer<typeof Feed>;
 export type ArticleType = z.infer<typeof Article>;
+export type BackupType = z.infer<typeof Backup>;
+export type BackupResponseType = z.infer<typeof BackupResponse>;
+export type DatabaseWipeResponseType = z.infer<typeof DatabaseWipeResponse>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
 
@@ -191,6 +213,31 @@ class ApiClient {
 
   async getReadiness() {
     return this.request('/readyz');
+  }
+
+  // Backup Management endpoints
+  async getBackups(): Promise<BackupType[]> {
+    return this.request<BackupType[]>('/admin/backups');
+  }
+
+  async createBackup(options: { compress?: boolean } = {}): Promise<BackupResponseType> {
+    return this.request<BackupResponseType>('/admin/backups', {
+      method: 'POST',
+      body: JSON.stringify({ compress: options.compress ?? true }),
+    });
+  }
+
+  async restoreBackup(filename: string): Promise<{ success: boolean; message: string; timestamp: string }> {
+    return this.request('/admin/backups/restore', {
+      method: 'POST',
+      body: JSON.stringify({ filename }),
+    });
+  }
+
+  async wipeDatabase(): Promise<DatabaseWipeResponseType> {
+    return this.request<DatabaseWipeResponseType>('/admin/database', {
+      method: 'DELETE',
+    });
   }
 }
 

@@ -6,6 +6,7 @@ import { initializeDatabase } from "./database/init.js";
 import { getDatabase } from "./database/connection.js";
 import { feedRoutes } from "./routes/feeds.js";
 import { articleRoutes } from "./routes/articles.js";
+import { backupRoutes } from "./routes/backup.js";
 
 const app = Fastify({
   logger: {
@@ -76,7 +77,7 @@ app.get("/healthz", async () => {
 
 app.get("/readyz", async (request, reply) => {
   const db = getDatabase();
-  const isReady = await db.healthCheck();
+  const isReady = db.healthCheck();
   
   if (!isReady) {
     reply.code(503);
@@ -96,6 +97,7 @@ app.get("/readyz", async (request, reply) => {
 
 await app.register(feedRoutes);
 await app.register(articleRoutes);
+await app.register(backupRoutes);
 
 const start = async (): Promise<void> => {
   try {

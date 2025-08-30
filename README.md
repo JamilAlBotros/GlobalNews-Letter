@@ -16,7 +16,7 @@ A modern RSS news aggregation system with web interface and API backend. Built w
 ### Prerequisites
 
 - Node.js 20+ LTS
-- pnpm (recommended) or npm
+- npm (workspaces supported)
 - Git
 
 ### Installation
@@ -24,8 +24,8 @@ A modern RSS news aggregation system with web interface and API backend. Built w
 1. **Clone and install dependencies:**
 ```bash
 git clone <your-repo>
-cd "GlobalNews Letter"
-pnpm install
+cd GlobalNewsLetter
+npm install
 ```
 
 2. **Set up environment:**
@@ -46,7 +46,7 @@ Default configuration works out of the box for development.
 
 **Option 1 - Start Everything (Recommended):**
 ```bash
-pnpm dev:all
+npm run dev:all
 # Starts both API (localhost:3333) and Frontend (localhost:3000)
 # Uses concurrently with colored output for easy monitoring
 ```
@@ -55,22 +55,20 @@ pnpm dev:all
 
 **Terminal 1 - API Server:**
 ```bash
-cd apps/api
-npm run dev
+npm run dev:api
 # API runs on http://localhost:3333
 # Health checks: /healthz and /readyz
 ```
 
 **Terminal 2 - Frontend Server:**
 ```bash
-cd apps/frontend  
-npm run dev
+npm run dev:frontend
 # Web UI runs on http://localhost:3000
 ```
 
 **Generate Contracts (when needed):**
 ```bash
-pnpm contracts:gen
+npm run contracts:gen
 # Regenerates OpenAPI schemas and TypeScript clients
 ```
 
@@ -115,7 +113,7 @@ GlobalNews Letter/
 ### Run All Tests
 ```bash
 # From root - runs tests for all workspaces
-pnpm -r test
+npm run test
 
 # Or run tests individually
 cd apps/api && npm test
@@ -157,10 +155,10 @@ curl http://localhost:3333/articles
 ### Quality Gates
 ```bash
 # Type check  
-pnpm typecheck
+npm run typecheck
 
 # Contract generation
-pnpm contracts:gen
+npm run contracts:gen
 ```
 
 ## 🔧 Configuration
@@ -254,11 +252,11 @@ GET    /readyz             # Readiness check (validates database)
 
 **Monorepo Root:**
 ```bash
-pnpm install              # Install all dependencies
-pnpm dev:all              # Start API + Frontend servers  
-pnpm contracts:gen        # Generate OpenAPI schemas
-pnpm -r test              # Run tests in all workspaces
-pnpm typecheck            # Type check all code
+npm install               # Install all dependencies
+npm run dev:all           # Start API + Frontend servers  
+npm run contracts:gen     # Generate OpenAPI schemas
+npm run test              # Run tests in all workspaces
+npm run typecheck         # Type check all code
 ```
 
 **API Server (apps/api):**

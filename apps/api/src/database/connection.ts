@@ -1,103 +1,87 @@
-import sqlite3 from "sqlite3";
-import { promisify } from "util";
+import Database from "better-sqlite3";
 
 export interface DatabaseConnection {
-  get<T = any>(sql: string, ...params: any[]): Promise<T | undefined>;
-  all<T = any>(sql: string, ...params: any[]): Promise<T[]>;
-  run(sql: string, ...params: any[]): Promise<sqlite3.RunResult>;
-  exec(sql: string): Promise<void>;
-  close(): Promise<void>;
+  get<T = any>(sql: string, ...params: any[]): T | undefined;
+  all<T = any>(sql: string, ...params: any[]): T[];
+  run(sql: string, ...params: any[]): Database.RunResult;
+  exec(sql: string): void;
+  close(): void;
+  healthCheck(): boolean;
 }
 
 export class SQLiteConnection implements DatabaseConnection {
-  private db: sqlite3.Database;
-  private dbGet: (sql: string, ...params: any[]) => Promise<any>;
-  private dbAll: (sql: string, ...params: any[]) => Promise<any[]>;
-  private dbRun: (sql: string, ...params: any[]) => Promise<sqlite3.RunResult>;
-  private dbExec: (sql: string) => Promise<void>;
-  private dbClose: () => Promise<void>;
+  private db: Database.Database;
 
   constructor(dbPath: string = "data/news.db") {
-    this.db = new sqlite3.Database(dbPath);
-    this.dbGet = promisify(this.db.get.bind(this.db));
-    this.dbAll = promisify(this.db.all.bind(this.db));
-    this.dbRun = promisify(this.db.run.bind(this.db));
-    this.dbExec = promisify(this.db.exec.bind(this.db));
-    this.dbClose = promisify(this.db.close.bind(this.db));
-
+    this.db = new Database(dbPath);
     this.configureSQLite();
   }
 
   private configureSQLite(): void {
-    this.db.serialize(() => {
-      this.db.run("PRAGMA journal_mode=WAL;");
-      this.db.run("PRAGMA foreign_keys=ON;");
-      this.db.run("PRAGMA synchronous=NORMAL;");
-      this.db.run("PRAGMA cache_size=1000;");
-      this.db.run("PRAGMA temp_store=memory;");
-    });
+    this.db.exec("PRAGMA journal_mode=WAL;");
+    this.db.exec("PRAGMA foreign_keys=ON;");
+    this.db.exec("PRAGMA synchronous=NORMAL;");
+    this.db.exec("PRAGMA cache_size=1000;");
+    this.db.exec("PRAGMA temp_store=memory;");
   }
 
-  async get<T = any>(sql: string, ...params: any[]): Promise<T | undefined> {
+  get<T = any>(sql: string, ...params: any[]): T | undefined {
     try {
-      return await this.dbGet(sql, ...params);
+      const stmt = this.db.prepare(sql);
+      return stmt.get(...params) as T | undefined;
     } catch (error) {
       console.error(`Database GET error: ${sql}`, error);
       throw error;
     }
   }
 
-  async all<T = any>(sql: string, ...params: any[]): Promise<T[]> {
+  all<T = any>(sql: string, ...params: any[]): T[] {
     try {
-      return await this.dbAll(sql, ...params);
+      const stmt = this.db.prepare(sql);
+      return stmt.all(...params) as T[];
     } catch (error) {
       console.error(`Database ALL error: ${sql}`, error);
       throw error;
     }
   }
 
-  async run(sql: string, ...params: any[]): Promise<sqlite3.RunResult> {
+  run(sql: string, ...params: any[]): Database.RunResult {
     try {
-      return await this.dbRun(sql, ...params);
+      const stmt = this.db.prepare(sql);
+      return stmt.run(...params);
     } catch (error) {
       console.error(`Database RUN error: ${sql}`, error);
       throw error;
     }
   }
 
-  async exec(sql: string): Promise<void> {
+  exec(sql: string): void {
     try {
-      return await this.dbExec(sql);
+      return this.db.exec(sql);
     } catch (error) {
       console.error(`Database EXEC error: ${sql}`, error);
       throw error;
     }
   }
 
-  async close(): Promise<void> {
+  close(): void {
     try {
-      return await this.dbClose();
+      this.db.close();
     } catch (error) {
       console.error("Database close error:", error);
       throw error;
     }
   }
 
-  async transaction<T>(operation: (conn: DatabaseConnection) => Promise<T>): Promise<T> {
-    await this.run("BEGIN TRANSACTION");
-    try {
-      const result = await operation(this);
-      await this.run("COMMIT");
-      return result;
-    } catch (error) {
-      await this.run("ROLLBACK");
-      throw error;
-    }
+  transaction<T>(operation: (conn: DatabaseConnection) => T): T {
+    return this.db.transaction(() => {
+      return operation(this);
+    })();
   }
 
-  async healthCheck(): Promise<boolean> {
+  healthCheck(): boolean {
     try {
-      await this.get("SELECT 1 as test");
+      this.get("SELECT 1 as test");
       return true;
     } catch {
       return false;
@@ -117,15 +101,15 @@ export function getDatabase(dbPath?: string): SQLiteConnection {
   return globalConnection;
 }
 
-export async function closeDatabase(): Promise<void> {
+export function closeDatabase(): void {
   if (globalConnection) {
-    await globalConnection.close();
+    globalConnection.close();
     globalConnection = null;
   }
 }
 
-export async function resetDatabase(): Promise<void> {
-  await closeDatabase();
+export function resetDatabase(): void {
+  closeDatabase();
 }
 
 process.on("SIGINT", () => closeDatabase());

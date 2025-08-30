@@ -39,14 +39,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const query = PaginationQuery.parse(request.query);
     const offset = (query.page - 1) * query.limit;
 
-    const [feeds, totalResult] = await Promise.all([
-      db.all<FeedRow>(
-        "SELECT * FROM feeds ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        query.limit,
-        offset
-      ),
-      db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds")
-    ]);
+    const feeds = db.all<FeedRow>(
+      "SELECT * FROM feeds ORDER BY created_at DESC LIMIT ? OFFSET ?",
+      query.limit,
+      offset
+    );
+    const totalResult = db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds");
 
     const total = totalResult?.count || 0;
     const totalPages = Math.ceil(total / query.limit);
@@ -65,7 +63,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.post("/feeds", async (request, reply) => {
     const input = CreateFeedInput.parse(request.body);
     
-    const existingFeed = await db.get<FeedRow>(
+    const existingFeed = db.get<FeedRow>(
       "SELECT id FROM feeds WHERE url = ?",
       input.url
     );
@@ -82,12 +80,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    await db.run(`
+    db.run(`
       INSERT INTO feeds (id, name, url, language, region, category, type, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, input.name, input.url, input.language, input.region, input.category, input.type, input.is_active ? 1 : 0, now, now]);
 
-    const newFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const newFeed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
     if (!newFeed) {
       throw new Error("Failed to create feed");
     }
@@ -99,7 +97,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.get("/feeds/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const feed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const feed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
     if (!feed) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -116,7 +114,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const input = UpdateFeedInput.parse(request.body);
 
-    const existingFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const existingFeed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
     if (!existingFeed) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -127,7 +125,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (input.url && input.url !== existingFeed.url) {
-      const duplicateFeed = await db.get<FeedRow>(
+      const duplicateFeed = db.get<FeedRow>(
         "SELECT id FROM feeds WHERE url = ? AND id != ?",
         input.url,
         id
@@ -178,12 +176,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     values.push(new Date().toISOString());
     values.push(id);
 
-    await db.run(
+    db.run(
       `UPDATE feeds SET ${updates.join(", ")} WHERE id = ?`,
       ...values
     );
 
-    const updatedFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const updatedFeed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
     if (!updatedFeed) {
       throw new Error("Failed to update feed");
     }
@@ -194,7 +192,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/feeds/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const existingFeed = await db.get<FeedRow>("SELECT id FROM feeds WHERE id = ?", id);
+    const existingFeed = db.get<FeedRow>("SELECT id FROM feeds WHERE id = ?", id);
     if (!existingFeed) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -204,7 +202,38 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    await db.run("DELETE FROM feeds WHERE id = ?", id);
+    db.run("DELETE FROM feeds WHERE id = ?", id);
     reply.code(204);
+  });
+
+  // Feed instances endpoint - shows actual feed processing instances/runs
+  app.get("/feeds/instances", async (request, reply) => {
+    const query = PaginationQuery.parse(request.query);
+    const offset = (query.page - 1) * query.limit;
+
+    // For now, return feed processing instances (could be from feed_runs or similar table)
+    // This is a placeholder implementation - adjust based on your feed processing architecture
+    const instances = db.all<any>(
+      `SELECT f.id, f.name, f.url, f.is_active, f.updated_at as last_run,
+       'running' as status, 0 as articles_fetched, NULL as error_message
+       FROM feeds f WHERE f.is_active = 1 
+       ORDER BY f.updated_at DESC LIMIT ? OFFSET ?`,
+      query.limit,
+      offset
+    );
+    const totalResult = db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds WHERE is_active = 1");
+
+    const total = totalResult?.count || 0;
+    const totalPages = Math.ceil(total / query.limit);
+
+    return {
+      data: instances,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        total_pages: totalPages
+      }
+    };
   });
 }

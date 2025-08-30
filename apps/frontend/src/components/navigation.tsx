@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
+import { useEffect, useState } from 'react';
 import {
   BarChart3,
   Globe,
@@ -29,6 +30,11 @@ const navigation = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -43,8 +49,8 @@ export function Navigation() {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigation.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || 
-                  (item.href !== '/' && pathname.startsWith(item.href));
+                const isActive = isClient && (pathname === item.href || 
+                  (item.href !== '/' && pathname.startsWith(item.href)));
                 
                 return (
                   <Link

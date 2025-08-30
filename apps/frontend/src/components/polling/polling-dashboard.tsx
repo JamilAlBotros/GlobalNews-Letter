@@ -22,20 +22,13 @@ export function PollingDashboard() {
 
   const statusData = pollingStatus || {
     is_running: false,
-    last_poll_at: null,
-    next_poll_at: null,
-    total_feeds: 0,
-    active_feeds: 0,
-    failed_feeds: 0,
-    articles_fetched_today: 0,
-    articles_fetched_last_hour: 0,
-    avg_response_time: 0,
-    polls_today: 0,
+    interval_minutes: 60,
+    last_poll_time: null,
+    next_poll_time: null,
+    total_polls: 0,
     successful_polls: 0,
     failed_polls: 0,
-    uptime_percentage: 0,
-    current_interval_minutes: 5,
-    adaptive_polling_enabled: false,
+    active_feeds_count: 0
   };
 
   const getStatusIcon = (isRunning: boolean) => {
@@ -102,7 +95,7 @@ export function PollingDashboard() {
                 <Clock className="h-4 w-4 text-blue-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Last Poll</p>
-              <p className="text-xs text-gray-500">{formatTimeAgo(statusData.last_poll_at)}</p>
+              <p className="text-xs text-gray-500">{statusData.last_poll_time ? formatTimeAgo(statusData.last_poll_time) : 'Never'}</p>
             </div>
             
             <div className="text-center">
@@ -110,7 +103,7 @@ export function PollingDashboard() {
                 <Zap className="h-4 w-4 text-green-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Next Poll</p>
-              <p className="text-xs text-gray-500">{formatTimeUntil(statusData.next_poll_at)}</p>
+              <p className="text-xs text-gray-500">{statusData.next_poll_time ? formatTimeUntil(statusData.next_poll_time) : 'N/A'}</p>
             </div>
           </div>
 
@@ -119,28 +112,28 @@ export function PollingDashboard() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Active Feeds</span>
               <span className="text-sm font-medium text-gray-900">
-                {statusData.active_feeds}/{statusData.total_feeds}
+                {statusData.active_feeds_count}
               </span>
             </div>
             
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Articles Today</span>
+              <span className="text-sm text-gray-600">Total Polls</span>
               <span className="text-sm font-medium text-gray-900">
-                {statusData.articles_fetched_today}
+                {statusData.total_polls}
               </span>
             </div>
             
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Last Hour</span>
+              <span className="text-sm text-gray-600">Successful Polls</span>
               <span className="text-sm font-medium text-gray-900">
-                {statusData.articles_fetched_last_hour}
+                {statusData.successful_polls}
               </span>
             </div>
             
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Avg Response</span>
+              <span className="text-sm text-gray-600">Failed Polls</span>
               <span className="text-sm font-medium text-gray-900">
-                {statusData.avg_response_time}ms
+                {statusData.failed_polls}
               </span>
             </div>
           </div>
@@ -150,14 +143,14 @@ export function PollingDashboard() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600">Success Rate</span>
               <span className="text-sm font-medium text-gray-900">
-                {((statusData.successful_polls / statusData.polls_today) * 100).toFixed(1)}%
+                {statusData.total_polls > 0 ? ((statusData.successful_polls / statusData.total_polls) * 100).toFixed(1) : '0'}%
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-green-500 h-2 rounded-full"
                 style={{ 
-                  width: `${(statusData.successful_polls / statusData.polls_today) * 100}%` 
+                  width: `${statusData.total_polls > 0 ? (statusData.successful_polls / statusData.total_polls) * 100 : 0}%` 
                 }}
               />
             </div>
@@ -170,39 +163,23 @@ export function PollingDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-600">Interval</span>
                 <span className="text-xs font-medium text-gray-900">
-                  {statusData.current_interval_minutes}m
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">Adaptive Polling</span>
-                <span className={`text-xs font-medium ${
-                  statusData.adaptive_polling_enabled 
-                    ? 'text-green-600' 
-                    : 'text-gray-600'
-                }`}>
-                  {statusData.adaptive_polling_enabled ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">Uptime</span>
-                <span className="text-xs font-medium text-gray-900">
-                  {statusData.uptime_percentage}%
+                  {statusData.interval_minutes}m
                 </span>
               </div>
             </div>
           </div>
 
           {/* Status Indicators */}
-          {statusData.failed_feeds > 0 && (
+          {statusData.failed_polls > 0 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <div className="flex items-start">
                 <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 mr-2" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-red-800">
-                    {statusData.failed_feeds} feeds failing
+                    {statusData.failed_polls} failed polls
                   </p>
                   <p className="text-xs text-red-600 mt-1">
-                    Check the Health Monitor for details
+                    Check the polling logs for details
                   </p>
                 </div>
               </div>

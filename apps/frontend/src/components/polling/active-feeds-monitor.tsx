@@ -14,21 +14,21 @@ import {
 } from 'lucide-react';
 
 export function ActiveFeedsMonitor() {
-  const { data: feeds, isLoading, error } = useQuery({
+  const { data: feedsResponse, isLoading, error } = useQuery({
     queryKey: ['active-feeds-monitor'],
     queryFn: () => apiClient.getActiveFeedsStatus(),
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
-  const feedsData = feeds || [];
+  const feedsData = feedsResponse?.feeds || [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'healthy':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'warning':
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      case 'failed':
+      case 'critical':
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
         return <Activity className="h-4 w-4 text-gray-400" />;
@@ -37,11 +37,11 @@ export function ActiveFeedsMonitor() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'healthy':
         return 'bg-green-50 border-green-200 text-green-800';
       case 'warning':
         return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-      case 'failed':
+      case 'critical':
         return 'bg-red-50 border-red-200 text-red-800';
       default:
         return 'bg-gray-50 border-gray-200 text-gray-800';
@@ -107,7 +107,7 @@ export function ActiveFeedsMonitor() {
       
       <div className="divide-y divide-gray-200">
         {feedsData.map((feed) => (
-          <div key={feed.id} className="px-6 py-4 hover:bg-gray-50">
+          <div key={feed.feed_id} className="px-6 py-4 hover:bg-gray-50">
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-4 flex-1">
                 <div className="flex-shrink-0">
@@ -119,27 +119,27 @@ export function ActiveFeedsMonitor() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-3">
                     <h4 className="text-sm font-medium text-gray-900 truncate">
-                      {feed.name}
+                      {feed.feed_name}
                     </h4>
                     {getStatusIcon(feed.status)}
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTierColor(feed.refresh_tier)}`}>
-                      {feed.refresh_tier}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      active
                     </span>
                   </div>
                   
                   <p className="text-xs text-gray-500 mt-1 truncate">
-                    {feed.url}
+                    {feed.feed_url}
                   </p>
                   
                   <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
                     <span className="flex items-center space-x-1">
                       <Clock className="h-3 w-3" />
-                      <span>Last: {formatRelativeTime(feed.last_poll_at)}</span>
+                      <span>Last: {feed.last_fetch_time ? formatRelativeTime(feed.last_fetch_time) : 'Never'}</span>
                     </span>
                     
-                    <span>Next: {formatTimeUntil(feed.next_poll_at)}</span>
+                    <span>Next: {feed.next_fetch_time ? formatTimeUntil(feed.next_fetch_time) : 'N/A'}</span>
                     
-                    <span>Today: {feed.articles_today}</span>
+                    <span>Today: {feed.articles_fetched_24h}</span>
                     
                     <span>Avg: {feed.avg_response_time}ms</span>
                   </div>
@@ -148,18 +148,18 @@ export function ActiveFeedsMonitor() {
                   <div className="mt-2">
                     <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                       <span>Success Rate</span>
-                      <span>{feed.success_rate.toFixed(1)}%</span>
+                      <span>{(feed.success_rate * 100).toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div
                         className={`h-1.5 rounded-full ${
-                          feed.success_rate >= 95
+                          feed.success_rate >= 0.95
                             ? 'bg-green-500'
-                            : feed.success_rate >= 80
+                            : feed.success_rate >= 0.80
                             ? 'bg-yellow-500'
                             : 'bg-red-500'
                         }`}
-                        style={{ width: `${Math.min(feed.success_rate, 100)}%` }}
+                        style={{ width: `${Math.min(feed.success_rate * 100, 100)}%` }}
                       />
                     </div>
                   </div>
@@ -178,13 +178,7 @@ export function ActiveFeedsMonitor() {
                 </div>
                 
                 <div className="text-xs text-gray-500">
-                  {feed.articles_fetched} articles
-                </div>
-                
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs text-gray-500 uppercase">{feed.language}</span>
-                  <span className="text-xs text-gray-400">•</span>
-                  <span className="text-xs text-gray-500 capitalize">{feed.category}</span>
+                  {feed.articles_fetched_24h} articles
                 </div>
               </div>
             </div>

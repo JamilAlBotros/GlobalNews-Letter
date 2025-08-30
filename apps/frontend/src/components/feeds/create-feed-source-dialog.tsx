@@ -47,12 +47,27 @@ export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDial
 
   const createMutation = useMutation({
     mutationFn: (data: CreateFeedSourceData) => {
-      const feedSourceData = {
-        ...data,
-        id: `${data.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+      const feedData = {
+        name: data.name,
+        url: data.base_url,
+        language: data.source_language === 'en' ? 'English' as const :
+                 data.source_language === 'es' ? 'Spanish' as const :
+                 data.source_language === 'ar' ? 'Arabic' as const :
+                 data.source_language === 'pt' ? 'Portuguese' as const :
+                 data.source_language === 'fr' ? 'French' as const :
+                 data.source_language === 'zh' ? 'Chinese' as const :
+                 'Japanese' as const,
+        region: data.primary_region || 'Global',
+        category: data.content_category === 'finance' ? 'Finance' as const :
+                 data.content_category === 'tech' ? 'Technology' as const :
+                 data.content_category === 'health' ? 'Health' as const :
+                 'News' as const,
+        type: data.content_type === 'breaking' ? 'News' as const :
+             data.content_type === 'analysis' ? 'Analysis' as const :
+             'News' as const,
         is_active: true,
       };
-      return apiClient.createFeedSource(feedSourceData, crypto.randomUUID());
+      return apiClient.createFeed(feedData, crypto.randomUUID());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed-sources'] });

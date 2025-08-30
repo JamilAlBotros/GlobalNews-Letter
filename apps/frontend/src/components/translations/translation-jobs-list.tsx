@@ -1,17 +1,10 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api';
-import { Languages, Clock, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Languages, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export function TranslationJobsList() {
-  const { data: jobs, isLoading, error, refetch } = useQuery({
-    queryKey: ['translation-jobs'],
-    queryFn: () => apiClient.getTranslationJobs(),
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
-  const jobsData = jobs || [];
+  // Mock data since translation API is not implemented yet
+  const jobsData: any[] = [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -80,17 +73,6 @@ export function TranslationJobsList() {
     return `${Math.floor(diffInMinutes / 60)}h ${diffInMinutes % 60}m`;
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white rounded-lg shadow">

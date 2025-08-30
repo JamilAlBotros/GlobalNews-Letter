@@ -49,7 +49,7 @@ export function PollingControls() {
   });
 
   const updateIntervalMutation = useMutation({
-    mutationFn: (minutes: number) => apiClient.updatePollingInterval({ minutes }),
+    mutationFn: (minutes: number) => apiClient.updatePollingInterval(minutes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polling-status'] });
       setShowSettings(false);
@@ -57,7 +57,7 @@ export function PollingControls() {
   });
 
   const isRunning = pollingStatus?.is_running ?? false;
-  const currentInterval = pollingStatus?.current_interval_minutes ?? 5;
+  const currentInterval = pollingStatus?.interval_minutes ?? 5;
 
   return (
     <div className="bg-white rounded-lg shadow">

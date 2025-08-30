@@ -85,7 +85,7 @@ class ApiClient {
       url += `?${params.toString()}`;
     }
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...fetchOptions.headers,
     };

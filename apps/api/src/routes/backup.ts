@@ -4,7 +4,7 @@ import { join, extname } from "path";
 import { createGzip, createGunzip } from "zlib";
 import { pipeline } from "stream/promises";
 import { createReadStream, createWriteStream } from "fs";
-import { Backup, CreateBackupInput, BackupResponse, RestoreBackupInput, DatabaseWipeResponse } from "../../../../packages/contracts/src/schemas/backup.js";
+import { Backup, CreateBackupInput, BackupResponse, RestoreBackupInput, DatabaseWipeResponse } from "../schemas/backup.js";
 import { getDatabase } from "../database/connection.js";
 
 const BACKUP_DIR = join(process.cwd(), "data", "backups");

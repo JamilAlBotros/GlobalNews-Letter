@@ -261,12 +261,8 @@ export function DatabaseManagement() {
                         <Clock className="h-3 w-3" />
                         <span>{formatRelativeTime(backup.created_at)}</span>
                       </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        backup.type === 'automatic' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {backup.type}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        manual
                       </span>
                       {backup.compressed && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">

@@ -57,7 +57,7 @@ export class SQLiteConnection implements DatabaseConnection {
 
   exec(sql: string): void {
     try {
-      return this.db.exec(sql);
+      this.db.exec(sql);
     } catch (error) {
       console.error(`Database EXEC error: ${sql}`, error);
       throw error;

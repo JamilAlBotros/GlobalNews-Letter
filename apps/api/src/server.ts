@@ -16,7 +16,7 @@ const app = Fastify({
         method: req.method,
         url: req.url,
         headers: req.headers,
-        reqId: req.reqId
+        reqId: (req as any).reqId
       }),
       res: (res) => ({
         statusCode: res.statusCode

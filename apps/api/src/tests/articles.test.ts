@@ -70,7 +70,9 @@ test("POST /articles creates a new article", async () => {
     description: "This is a test article description",
     content: "Full content of the test article",
     url: "https://test.com/article1",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: "english",
+    needs_manual_language_review: false
   };
 
   const response = await app.inject({
@@ -87,7 +89,9 @@ test("POST /articles creates a new article", async () => {
     description: "This is a test article description",
     content: "Full content of the test article",
     url: "https://test.com/article1",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: "english",
+    needs_manual_language_review: false
   });
   expect(body.id).toBeDefined();
   expect(body.scraped_at).toBeDefined();
@@ -101,7 +105,9 @@ test("POST /articles returns 400 for non-existent feed", async () => {
     description: null,
     content: null,
     url: "https://test.com/article2",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: null,
+    needs_manual_language_review: true
   };
 
   const response = await app.inject({
@@ -122,7 +128,9 @@ test("POST /articles returns 409 for duplicate URL", async () => {
     description: null,
     content: null,
     url: "https://test.com/duplicate",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: null,
+    needs_manual_language_review: true
   };
 
   await app.inject({
@@ -149,7 +157,9 @@ test("GET /articles/:id returns article by ID", async () => {
     description: "Description for single article",
     content: "Content for single article",
     url: "https://test.com/single",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: "english",
+    needs_manual_language_review: false
   };
 
   const createResponse = await app.inject({
@@ -208,7 +218,9 @@ test("GET /articles filters by feed_id", async () => {
       description: null,
       content: null,
       url: "https://test.com/feed1-article",
-      published_at: "2024-01-01T12:00:00Z"
+      published_at: "2024-01-01T12:00:00Z",
+      detected_language: null,
+      needs_manual_language_review: true
     }
   });
 
@@ -221,7 +233,9 @@ test("GET /articles filters by feed_id", async () => {
       description: null,
       content: null,
       url: "https://test2.com/feed2-article",
-      published_at: "2024-01-01T12:00:00Z"
+      published_at: "2024-01-01T12:00:00Z",
+      detected_language: null,
+      needs_manual_language_review: true
     }
   });
 
@@ -244,7 +258,9 @@ test("PUT /articles/:id updates article", async () => {
     description: "Original description",
     content: "Original content",
     url: "https://test.com/update",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: "english",
+    needs_manual_language_review: false
   };
 
   const createResponse = await app.inject({
@@ -281,7 +297,9 @@ test("DELETE /articles/:id deletes article", async () => {
     description: null,
     content: null,
     url: "https://test.com/delete",
-    published_at: "2024-01-01T12:00:00Z"
+    published_at: "2024-01-01T12:00:00Z",
+    detected_language: null,
+    needs_manual_language_review: true
   };
 
   const createResponse = await app.inject({
@@ -318,7 +336,9 @@ test("GET /articles with pagination", async () => {
         description: null,
         content: null,
         url: `https://test.com/article${i}`,
-        published_at: `2024-01-0${(i % 9) + 1}T12:00:00Z`
+        published_at: `2024-01-0${(i % 9) + 1}T12:00:00Z`,
+        detected_language: null,
+        needs_manual_language_review: true
       }
     });
   }

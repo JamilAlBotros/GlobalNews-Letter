@@ -174,9 +174,9 @@ describe("LanguageDetectionService", () => {
 
     test("detects Chinese from Chinese content", () => {
       const article = {
-        title: "经济新闻：投资市场分析",
-        description: "根据最新报告，市场在技术投资方面显示出显著增长。",
-        content: "<p>技术公司一直在新产品和服务上投资大量资金。市场分析显示，中国和其他中文国家的企业具有强劲的增长潜力。</p>",
+        title: "经济新闻：投资市场分析报告",
+        description: "根据最新报告，市场在技术投资方面显示出显著增长，这对中国经济发展具有重要意义。",
+        content: "<p>技术公司一直在新产品和服务上投资大量资金。市场分析显示，中国和其他中文国家的企业具有强劲的增长潜力。投资者对新兴技术领域表现出浓厚兴趣，预计未来几年将继续保持这一趋势。</p>",
         url: "https://unknown-domain.com/article/123"
       };
 
@@ -297,7 +297,7 @@ describe("LanguageDetectionService", () => {
 
     test("handles articles with null/undefined fields", () => {
       const article = {
-        title: "Technology Investment Market Analysis",
+        title: "Technology Investment Market Analysis Report for Business Growth and Development Strategies",
         description: null,
         content: undefined,
         url: "https://unknown-domain.com/article/123"

@@ -23,7 +23,18 @@ export class LanguageDetectionService {
     confidence: number;
     method: 'url' | 'content' | 'insufficient_content';
   } {
-    // Check if we have sufficient content for reliable detection
+    // 1. First try URL-based detection for high-confidence domains
+    const urlLanguage = this.detectLanguageFromUrl(article.url);
+    if (urlLanguage) {
+      return {
+        detectedLanguage: urlLanguage,
+        needsManualReview: false,
+        confidence: 0.85,
+        method: 'url'
+      };
+    }
+
+    // 2. Check if we have sufficient content for reliable detection
     const textSamples: string[] = [];
     if (article.title) textSamples.push(article.title);
     if (article.description) textSamples.push(article.description);
@@ -45,18 +56,7 @@ export class LanguageDetectionService {
       };
     }
 
-    // 1. First try URL-based detection for high-confidence domains
-    const urlLanguage = this.detectLanguageFromUrl(article.url);
-    if (urlLanguage) {
-      return {
-        detectedLanguage: urlLanguage,
-        needsManualReview: false,
-        confidence: 0.85,
-        method: 'url'
-      };
-    }
-
-    // 2. Then try content-based detection
+    // 3. Then try content-based detection
     const contentLanguage = this.detectLanguageFromContent(article);
     if (contentLanguage) {
       return {
@@ -67,7 +67,7 @@ export class LanguageDetectionService {
       };
     }
 
-    // 3. If we reach here, flag for manual review
+    // 4. If we reach here, flag for manual review
     return {
       detectedLanguage: null,
       needsManualReview: true,

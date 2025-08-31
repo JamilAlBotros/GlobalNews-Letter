@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { v4 as uuidv4 } from "uuid";
 import { 
   PollingStatus, 
   StartPollingInput, 
@@ -269,21 +270,45 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
       const articlesFound = Math.floor(Math.random() * 5) + 1; // 1-5 articles
       
       for (let i = 0; i < articlesFound; i++) {
+        const articleId = uuidv4();
+        const now = new Date().toISOString();
+        
         // Simulate article data (in real implementation, this would come from RSS parsing)
         const mockArticle = {
           title: `Sample Article ${i + 1} from ${feed.name}`,
           description: `This is a sample article description for testing language detection.`,
           content: `<p>This is sample content for testing purposes. In a real implementation, this would be the actual RSS article content.</p>`,
-          url: `${feed.url}/article-${Date.now()}-${i}`
+          url: `${feed.url}/article-${Date.now()}-${i}-${articleId}`
         };
         
         // Detect language
         const languageResult = languageDetector.detectArticleLanguage(mockArticle);
         
-        console.log(`Detected language for article "${mockArticle.title}": ${languageResult.detectedLanguage} (confidence: ${languageResult.confidence}, method: ${languageResult.method})`);
+        console.log(`Detected language for article \"${mockArticle.title}\": ${languageResult.detectedLanguage} (confidence: ${languageResult.confidence}, method: ${languageResult.method})`);
         
-        // Here you would insert the article into the database with the detected language
-        // For now, we just log it
+        // Insert the article into the database with the detected language
+        try {
+          await db.run(`
+            INSERT INTO articles (id, feed_id, detected_language, title, description, content, url, published_at, scraped_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            articleId,
+            feed.id,
+            languageResult.detectedLanguage,
+            mockArticle.title,
+            mockArticle.description,
+            mockArticle.content,
+            mockArticle.url,
+            now, // published_at
+            now, // scraped_at
+            now  // created_at
+          ]);
+        } catch (error) {
+          // Skip if article URL already exists (duplicate)
+          if (error && (error as any).code !== 'SQLITE_CONSTRAINT_UNIQUE') {
+            console.error(`Failed to insert article: ${error}`);
+          }
+        }
       }
       
       db.run(

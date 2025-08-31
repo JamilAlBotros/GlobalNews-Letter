@@ -1,5 +1,4 @@
 import { FastifyInstance } from "fastify";
-import { v4 as uuidv4 } from "uuid";
 import { 
   PollingStatus, 
   StartPollingInput, 
@@ -13,7 +12,6 @@ import {
   ActiveFeedStatusType
 } from "../schemas/polling.js";
 import { getDatabase } from "../database/connection.js";
-import { LanguageDetectionService } from "../services/language-detection.js";
 
 // Global polling state
 let pollingState = {
@@ -25,8 +23,6 @@ let pollingState = {
   failedPolls: 0,
   timer: null as NodeJS.Timeout | null
 };
-
-const languageDetector = new LanguageDetectionService();
 
 export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   const db = getDatabase();
@@ -180,50 +176,26 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     }>("SELECT id, name, url, updated_at FROM feeds WHERE is_active = 1");
 
     const feedStatuses = feeds.map(feed => {
-      // Calculate mock metrics for each feed
+      // Real implementation would track actual feed metrics in database
+      // For now, return basic status based on feed data
       const lastFetchTime = feed.updated_at;
-      const timeSinceLastFetch = Date.now() - new Date(lastFetchTime).getTime();
-      const hoursAgo = timeSinceLastFetch / (1000 * 60 * 60);
-      
-      // Determine status based on time since last fetch
-      let status: "healthy" | "warning" | "critical" | "unknown";
-      let successRate: number;
-      let consecutiveFailures: number;
-      
-      if (hoursAgo < 2) {
-        status = "healthy";
-        successRate = 0.95 + Math.random() * 0.05;
-        consecutiveFailures = 0;
-      } else if (hoursAgo < 6) {
-        status = "warning";
-        successRate = 0.75 + Math.random() * 0.2;
-        consecutiveFailures = Math.floor(Math.random() * 3);
-      } else {
-        status = "critical";
-        successRate = 0.3 + Math.random() * 0.4;
-        consecutiveFailures = Math.floor(Math.random() * 10) + 3;
-      }
-
       const nextFetchTime = pollingState.isRunning
         ? new Date(Date.now() + pollingState.intervalMinutes * 60 * 1000).toISOString()
         : null;
-
-      const totalFetches24h = 24;
-      const successfulFetches24h = Math.floor(totalFetches24h * successRate);
 
       const feedStatus: ActiveFeedStatusType = {
         feed_id: feed.id,
         feed_name: feed.name,
         feed_url: feed.url,
-        status,
+        status: "unknown",
         last_fetch_time: lastFetchTime,
         next_fetch_time: nextFetchTime,
-        success_rate: Math.round(successRate * 100) / 100,
-        consecutive_failures: consecutiveFailures,
-        total_fetches_24h: totalFetches24h,
-        successful_fetches_24h: successfulFetches24h,
-        avg_response_time: Math.floor(800 + Math.random() * 2000),
-        articles_fetched_24h: Math.floor(successfulFetches24h * (5 + Math.random() * 15))
+        success_rate: 0,
+        consecutive_failures: 0,
+        total_fetches_24h: 0,
+        successful_fetches_24h: 0,
+        avg_response_time: 0,
+        articles_fetched_24h: 0
       };
 
       return feedStatus;
@@ -231,12 +203,10 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
     const summary = {
       total_active_feeds: feedStatuses.length,
-      healthy_feeds: feedStatuses.filter(f => f.status === "healthy").length,
-      warning_feeds: feedStatuses.filter(f => f.status === "warning").length,
-      critical_feeds: feedStatuses.filter(f => f.status === "critical").length,
-      avg_success_rate: feedStatuses.length > 0 
-        ? Math.round((feedStatuses.reduce((sum, f) => sum + f.success_rate, 0) / feedStatuses.length) * 100) / 100
-        : 0
+      healthy_feeds: 0,
+      warning_feeds: 0,
+      critical_feeds: 0,
+      avg_success_rate: 0
     };
 
     const response: ActiveFeedsStatusResponseType = {
@@ -264,64 +234,30 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
 
     let totalArticlesFound = 0;
 
-    // Simulate processing each feed
+    // Process each feed
     for (const feed of activeFeeds) {
-      // Simulate finding articles with language detection
-      const articlesFound = Math.floor(Math.random() * 5) + 1; // 1-5 articles
-      
-      for (let i = 0; i < articlesFound; i++) {
-        const articleId = uuidv4();
-        const now = new Date().toISOString();
+      try {
+        // TODO: Implement actual RSS parsing
+        // This is where RSS feed parsing would happen:
+        // 1. Fetch RSS feed from feed.url
+        // 2. Parse XML to extract articles
+        // 3. Process each article with language detection
+        // 4. Insert new articles into database
         
-        // Simulate article data (in real implementation, this would come from RSS parsing)
-        const mockArticle = {
-          title: `Sample Article ${i + 1} from ${feed.name}`,
-          description: `This is a sample article description for testing language detection.`,
-          content: `<p>This is sample content for testing purposes. In a real implementation, this would be the actual RSS article content.</p>`,
-          url: `${feed.url}/article-${Date.now()}-${i}-${articleId}`
-        };
+        console.log(`Polling feed: ${feed.name} (${feed.url})`);
         
-        // Detect language
-        const languageResult = languageDetector.detectArticleLanguage(mockArticle);
+        // Update feed timestamp to track polling activity
+        db.run(
+          "UPDATE feeds SET updated_at = ? WHERE id = ?",
+          new Date().toISOString(),
+          feed.id
+        );
         
-        if (languageResult.needsManualReview) {
-          console.log(`Article \"${mockArticle.title}\" flagged for manual language review (${languageResult.method})`);
-        } else {
-          console.log(`Detected language for article \"${mockArticle.title}\": ${languageResult.detectedLanguage} (confidence: ${languageResult.confidence}, method: ${languageResult.method})`);
-        }
-        
-        // Insert the article into the database with the detected language
-        try {
-          await db.run(`
-            INSERT INTO articles (id, feed_id, detected_language, needs_manual_language_review, title, description, content, url, published_at, scraped_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
-            articleId,
-            feed.id,
-            languageResult.detectedLanguage,
-            languageResult.needsManualReview ? 1 : 0,
-            mockArticle.title,
-            mockArticle.description,
-            mockArticle.content,
-            mockArticle.url,
-            now, // published_at
-            now, // scraped_at
-            now  // created_at
-          ]);
-        } catch (error) {
-          // Skip if article URL already exists (duplicate)
-          if (error && (error as any).code !== 'SQLITE_CONSTRAINT_UNIQUE') {
-            console.error(`Failed to insert article: ${error}`);
-          }
-        }
+        // For now, no articles are processed since RSS parsing is not implemented
+        totalArticlesFound += 0;
+      } catch (error) {
+        console.error(`Failed to poll feed ${feed.name}: ${error}`);
       }
-      
-      db.run(
-        "UPDATE feeds SET updated_at = ? WHERE id = ?",
-        new Date().toISOString(),
-        feed.id
-      );
-      totalArticlesFound += articlesFound;
     }
 
     pollingState.successfulPolls++;

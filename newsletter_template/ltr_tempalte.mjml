@@ -1,0 +1,24 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-text font-family="Courier New, monospace" color="#00ff00" />
+      <mj-all line-height="1.5" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#000000" width="600px">
+    <mj-section>
+      <mj-column>
+        <mj-text align="center" font-size="24px">🟢 {{TITLE}}</mj-text>
+        <mj-text>{{INTRO}}</mj-text>
+        <mj-text>
+          <ul>
+            <li><a href="{{LINK1_URL}}" style="color:#00ff00;">{{LINK1_TEXT}}</a></li>
+            <li><a href="{{LINK2_URL}}" style="color:#00ff00;">{{LINK2_TEXT}}</a></li>
+            <li><a href="{{LINK3_URL}}" style="color:#00ff00;">{{LINK3_TEXT}}</a></li>
+          </ul>
+        </mj-text>
+        <mj-text>{{FOOTER}}</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

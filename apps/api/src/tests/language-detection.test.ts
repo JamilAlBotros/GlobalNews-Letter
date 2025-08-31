@@ -247,7 +247,7 @@ describe("LanguageDetectionService", () => {
   });
 
   describe("Edge cases and fallbacks", () => {
-    test("falls back to English for minimal content", () => {
+    test("flags minimal content for manual review", () => {
       const article = {
         title: "X",
         description: "Y", 
@@ -257,12 +257,13 @@ describe("LanguageDetectionService", () => {
 
       const result = languageDetector.detectArticleLanguage(article);
       
-      expect(result.detectedLanguage).toBe("english");
-      expect(result.method).toBe("fallback");
-      expect(result.confidence).toBe(0.3);
+      expect(result.detectedLanguage).toBeNull();
+      expect(result.needsManualReview).toBe(true);
+      expect(result.method).toBe("insufficient_content");
+      expect(result.confidence).toBe(0);
     });
 
-    test("falls back to English for empty content", () => {
+    test("flags empty content for manual review", () => {
       const article = {
         title: "",
         description: null,
@@ -272,9 +273,10 @@ describe("LanguageDetectionService", () => {
 
       const result = languageDetector.detectArticleLanguage(article);
       
-      expect(result.detectedLanguage).toBe("english");
-      expect(result.method).toBe("fallback");
-      expect(result.confidence).toBe(0.3);
+      expect(result.detectedLanguage).toBeNull();
+      expect(result.needsManualReview).toBe(true);
+      expect(result.method).toBe("insufficient_content");
+      expect(result.confidence).toBe(0);
     });
 
     test("prioritizes URL detection over content detection", () => {
@@ -303,8 +305,9 @@ describe("LanguageDetectionService", () => {
 
       const result = languageDetector.detectArticleLanguage(article);
       
-      // Should still detect from title
+      // Should still detect from title if sufficient content
       expect(result.detectedLanguage).toBe("english");
+      expect(result.needsManualReview).toBe(false);
       expect(result.method).toBe("content");
       expect(result.confidence).toBeGreaterThan(0.6);
     });
@@ -313,9 +316,9 @@ describe("LanguageDetectionService", () => {
   describe("Mixed content scenarios", () => {
     test("handles mixed language content with English dominance", () => {
       const article = {
-        title: "Technology News with some español words but mostly English content",
-        description: "This article contains primarily English content with technology, investment, market, business, company, and analysis terms.",
-        content: "<p>The technology market shows significant growth. Companies are investing in new products and services. Some palabras en español but mainly English business analysis.</p>",
+        title: "Technology News with some español words but mostly English content for testing purposes",
+        description: "This article contains primarily English content with technology, investment, market, business, company, and analysis terms for comprehensive language detection testing.",
+        content: "<p>The technology market shows significant growth in recent years according to business reports. Companies are investing in new products and services across multiple industries. Some palabras en español but mainly English business analysis and market research data for comprehensive testing.</p>",
         url: "https://unknown-domain.com/article/123"
       };
 

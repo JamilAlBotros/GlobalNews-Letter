@@ -5,6 +5,7 @@ export const Article = z.object({
   feed_id: z.string().uuid(),
   title: z.string().min(1),
   detected_language: z.string().nullable(),
+  needs_manual_language_review: z.boolean(),
   description: z.string().nullable(),
   content: z.string().nullable(),
   url: z.string().url(),
@@ -17,6 +18,7 @@ export const CreateArticleInput = z.object({
   feed_id: z.string().uuid(),
   title: z.string().min(1),
   detected_language: z.string().nullable(),
+  needs_manual_language_review: z.boolean().optional(),
   description: z.string().nullable(),
   content: z.string().nullable(),
   url: z.string().url(),
@@ -26,6 +28,7 @@ export const CreateArticleInput = z.object({
 export const UpdateArticleInput = z.object({
   title: z.string().min(1).optional(),
   detected_language: z.string().nullable().optional(),
+  needs_manual_language_review: z.boolean().optional(),
   description: z.string().nullable().optional(),
   content: z.string().nullable().optional(),
   url: z.string().url().optional(),

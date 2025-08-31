@@ -23,6 +23,7 @@ export async function initializeDatabase(): Promise<void> {
       id TEXT PRIMARY KEY,
       feed_id TEXT NOT NULL REFERENCES feeds(id) ON DELETE CASCADE,
       detected_language TEXT,
+      needs_manual_language_review BOOLEAN DEFAULT FALSE,
       title TEXT NOT NULL,
       description TEXT,
       content TEXT,

@@ -18,15 +18,39 @@ export class LanguageDetectionService {
     content?: string | null;
     url: string;
   }): {
-    detectedLanguage: string;
+    detectedLanguage: string | null;
+    needsManualReview: boolean;
     confidence: number;
-    method: 'url' | 'content' | 'fallback';
+    method: 'url' | 'content' | 'insufficient_content';
   } {
+    // Check if we have sufficient content for reliable detection
+    const textSamples: string[] = [];
+    if (article.title) textSamples.push(article.title);
+    if (article.description) textSamples.push(article.description);
+    if (article.content) {
+      const textContent = this.extractTextFromHTML(article.content);
+      if (textContent.length > this.minTextLength) {
+        textSamples.push(textContent.slice(0, 500));
+      }
+    }
+    const combinedText = textSamples.join(' ').trim();
+    
+    // If insufficient content, flag for manual review
+    if (combinedText.length < this.minTextLength) {
+      return {
+        detectedLanguage: null,
+        needsManualReview: true,
+        confidence: 0,
+        method: 'insufficient_content'
+      };
+    }
+
     // 1. First try URL-based detection for high-confidence domains
     const urlLanguage = this.detectLanguageFromUrl(article.url);
     if (urlLanguage) {
       return {
         detectedLanguage: urlLanguage,
+        needsManualReview: false,
         confidence: 0.85,
         method: 'url'
       };
@@ -37,16 +61,18 @@ export class LanguageDetectionService {
     if (contentLanguage) {
       return {
         detectedLanguage: contentLanguage.language,
+        needsManualReview: false,
         confidence: contentLanguage.confidence,
         method: 'content'
       };
     }
 
-    // 3. Fallback to English
+    // 3. If we reach here, flag for manual review
     return {
-      detectedLanguage: 'english',
-      confidence: 0.3,
-      method: 'fallback'
+      detectedLanguage: null,
+      needsManualReview: true,
+      confidence: 0,
+      method: 'insufficient_content'
     };
   }
 

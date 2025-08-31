@@ -8,6 +8,7 @@ interface ArticleRow {
   id: string;
   feed_id: string;
   detected_language: string | null;
+  needs_manual_language_review: number;
   title: string;
   description: string | null;
   content: string | null;
@@ -22,6 +23,7 @@ function mapArticleRow(row: ArticleRow): Article {
     id: row.id,
     feed_id: row.feed_id,
     detected_language: row.detected_language,
+    needs_manual_language_review: Boolean(row.needs_manual_language_review),
     title: row.title,
     description: row.description,
     content: row.content,
@@ -110,12 +112,13 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     const now = new Date().toISOString();
 
     await db.run(`
-      INSERT INTO articles (id, feed_id, detected_language, title, description, content, url, published_at, scraped_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO articles (id, feed_id, detected_language, needs_manual_language_review, title, description, content, url, published_at, scraped_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       input.feed_id,
       input.detected_language,
+      input.needs_manual_language_review ? 1 : 0,
       input.title,
       input.description,
       input.content,
@@ -186,6 +189,10 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     if (input.detected_language !== undefined) {
       updates.push("detected_language = ?");
       values.push(input.detected_language);
+    }
+    if (input.needs_manual_language_review !== undefined) {
+      updates.push("needs_manual_language_review = ?");
+      values.push(input.needs_manual_language_review ? 1 : 0);
     }
     if (input.content !== undefined) {
       updates.push("content = ?");

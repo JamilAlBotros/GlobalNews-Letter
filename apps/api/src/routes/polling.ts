@@ -284,17 +284,22 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
         // Detect language
         const languageResult = languageDetector.detectArticleLanguage(mockArticle);
         
-        console.log(`Detected language for article \"${mockArticle.title}\": ${languageResult.detectedLanguage} (confidence: ${languageResult.confidence}, method: ${languageResult.method})`);
+        if (languageResult.needsManualReview) {
+          console.log(`Article \"${mockArticle.title}\" flagged for manual language review (${languageResult.method})`);
+        } else {
+          console.log(`Detected language for article \"${mockArticle.title}\": ${languageResult.detectedLanguage} (confidence: ${languageResult.confidence}, method: ${languageResult.method})`);
+        }
         
         // Insert the article into the database with the detected language
         try {
           await db.run(`
-            INSERT INTO articles (id, feed_id, detected_language, title, description, content, url, published_at, scraped_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO articles (id, feed_id, detected_language, needs_manual_language_review, title, description, content, url, published_at, scraped_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             articleId,
             feed.id,
             languageResult.detectedLanguage,
+            languageResult.needsManualReview ? 1 : 0,
             mockArticle.title,
             mockArticle.description,
             mockArticle.content,

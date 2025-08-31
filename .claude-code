@@ -1,0 +1,9 @@
+  {
+    "mcpServers": {
+      "typescript-mcp": {
+        "command": "node",
+        "args": ["./mcp/build/server.js"],
+        "cwd": "C:\\Users\\jamil\\Documents\\projects\\GlobalNewsLetter"
+      }
+    }
+  }

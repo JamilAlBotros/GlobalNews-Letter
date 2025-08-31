@@ -12,6 +12,7 @@ import {
   ActiveFeedStatusType
 } from "../schemas/polling.js";
 import { getDatabase } from "../database/connection.js";
+import { LanguageDetectionService } from "../services/language-detection.js";
 
 // Global polling state
 let pollingState = {
@@ -23,6 +24,8 @@ let pollingState = {
   failedPolls: 0,
   timer: null as NodeJS.Timeout | null
 };
+
+const languageDetector = new LanguageDetectionService();
 
 export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   const db = getDatabase();
@@ -262,16 +265,32 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
 
     // Simulate processing each feed
     for (const feed of activeFeeds) {
-      // In a real implementation, this would fetch and parse RSS
-      // For now, simulate by updating the feed's updated_at timestamp
+      // Simulate finding articles with language detection
+      const articlesFound = Math.floor(Math.random() * 5) + 1; // 1-5 articles
+      
+      for (let i = 0; i < articlesFound; i++) {
+        // Simulate article data (in real implementation, this would come from RSS parsing)
+        const mockArticle = {
+          title: `Sample Article ${i + 1} from ${feed.name}`,
+          description: `This is a sample article description for testing language detection.`,
+          content: `<p>This is sample content for testing purposes. In a real implementation, this would be the actual RSS article content.</p>`,
+          url: `${feed.url}/article-${Date.now()}-${i}`
+        };
+        
+        // Detect language
+        const languageResult = languageDetector.detectArticleLanguage(mockArticle);
+        
+        console.log(`Detected language for article "${mockArticle.title}": ${languageResult.detectedLanguage} (confidence: ${languageResult.confidence}, method: ${languageResult.method})`);
+        
+        // Here you would insert the article into the database with the detected language
+        // For now, we just log it
+      }
+      
       db.run(
         "UPDATE feeds SET updated_at = ? WHERE id = ?",
         new Date().toISOString(),
         feed.id
       );
-
-      // Simulate finding articles
-      const articlesFound = Math.floor(Math.random() * 10);
       totalArticlesFound += articlesFound;
     }
 

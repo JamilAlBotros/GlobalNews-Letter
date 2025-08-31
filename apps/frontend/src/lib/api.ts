@@ -18,6 +18,7 @@ export const Article = z.object({
   id: z.string(),
   feed_id: z.string(),
   title: z.string(),
+  detected_language: z.string().nullable(),
   description: z.string().nullable(),
   content: z.string().nullable(),
   url: z.string(),

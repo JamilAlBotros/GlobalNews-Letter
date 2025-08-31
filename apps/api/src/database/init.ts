@@ -22,6 +22,7 @@ export async function initializeDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS articles (
       id TEXT PRIMARY KEY,
       feed_id TEXT NOT NULL REFERENCES feeds(id) ON DELETE CASCADE,
+      detected_language TEXT,
       title TEXT NOT NULL,
       description TEXT,
       content TEXT,

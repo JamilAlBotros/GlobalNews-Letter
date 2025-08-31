@@ -171,7 +171,7 @@ class ApiClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...fetchOptions.headers,
+      ...(fetchOptions.headers as Record<string, string> || {}),
     };
 
     // Add idempotency key for POST requests
@@ -339,6 +339,10 @@ class ApiClient {
   async stopPolling(): Promise<{ success: boolean; message: string }> {
     return this.request('/polling/stop', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
     });
   }
 

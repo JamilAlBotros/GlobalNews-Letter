@@ -2,17 +2,22 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Globe, Star, Edit, Trash2, Loader2, AlertCircle } from 'lucide-react';
 
 export function FeedSourcesList() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
+  const [isClient, setIsClient] = useState(false);
 
   const { data: feeds, isLoading, error, refetch } = useQuery({
     queryKey: ['feeds'],
     queryFn: () => apiClient.getFeeds(1, 100),
   });
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const feedsData = feeds || [];
 
@@ -116,7 +121,7 @@ export function FeedSourcesList() {
           <div className="flex-1" />
           
           <div className="text-sm text-gray-600">
-            {filteredFeeds.length} feeds
+            {isClient ? `${filteredFeeds.length} feeds` : 'Loading feeds...'}
           </div>
         </div>
       </div>

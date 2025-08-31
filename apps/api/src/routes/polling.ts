@@ -5,7 +5,11 @@ import {
   UpdatePollingIntervalInput,
   PollTriggerResponse,
   ActiveFeedsStatusResponse,
-  ActiveFeedStatus
+  ActiveFeedStatus,
+  PollingStatusType,
+  PollTriggerResponseType,
+  ActiveFeedsStatusResponseType,
+  ActiveFeedStatusType
 } from "../schemas/polling.js";
 import { getDatabase } from "../database/connection.js";
 
@@ -33,7 +37,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       ? new Date(new Date(pollingState.lastPollTime).getTime() + pollingState.intervalMinutes * 60 * 1000).toISOString()
       : null;
 
-    const status: PollingStatus = {
+    const status: PollingStatusType = {
       is_running: pollingState.isRunning,
       interval_minutes: pollingState.intervalMinutes,
       last_poll_time: pollingState.lastPollTime,
@@ -107,7 +111,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     try {
       const result = await executePoll();
       
-      const response: PollTriggerResponse = {
+      const response: PollTriggerResponseType = {
         success: true,
         message: "Manual poll completed successfully",
         feeds_processed: result.feedsProcessed,
@@ -119,7 +123,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     } catch (error) {
       pollingState.failedPolls++;
       
-      const response: PollTriggerResponse = {
+      const response: PollTriggerResponseType = {
         success: false,
         message: `Poll failed: ${(error as Error).message}`,
         feeds_processed: 0,
@@ -203,7 +207,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       const totalFetches24h = 24;
       const successfulFetches24h = Math.floor(totalFetches24h * successRate);
 
-      const feedStatus: ActiveFeedStatus = {
+      const feedStatus: ActiveFeedStatusType = {
         feed_id: feed.id,
         feed_name: feed.name,
         feed_url: feed.url,
@@ -231,7 +235,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
         : 0
     };
 
-    const response: ActiveFeedsStatusResponse = {
+    const response: ActiveFeedsStatusResponseType = {
       polling_active: pollingState.isRunning,
       feeds: feedStatuses,
       summary

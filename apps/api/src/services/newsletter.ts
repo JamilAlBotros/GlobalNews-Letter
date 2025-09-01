@@ -187,36 +187,6 @@ export class NewsletterService {
     const { writeFileSync } = require('fs');
     writeFileSync(filename, html, 'utf8');
   }
-
-  /**
-   * Generate preview newsletter with sample data
-   */
-  generatePreview(language: NewsletterLanguage = 'ltr'): string {
-    const sampleData: NewsletterData = {
-      title: 'Weekly Tech Update',
-      intro: 'Hello, here are the top stories this week...',
-      articles: [
-        {
-          url: 'https://example.com/article1',
-          title: 'AI cracks financial models',
-          description: 'Latest developments in AI technology'
-        },
-        {
-          url: 'https://example.com/article2',
-          title: 'Climate change breakthrough',
-          description: 'New research on renewable energy'
-        },
-        {
-          url: 'https://example.com/article3',
-          title: 'Space exploration update',
-          description: 'Latest mission to Mars shows promising results'
-        }
-      ],
-      footer: 'Stay tuned for more updates!'
-    };
-
-    return this.generateDynamicNewsletter(sampleData, language);
-  }
 }
 
 // Export default instance

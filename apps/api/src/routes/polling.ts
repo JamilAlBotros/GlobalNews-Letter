@@ -228,8 +228,8 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
     pollingState.totalPolls++;
 
     // Get active feeds
-    const activeFeeds = db.all<{ id: string; url: string; name: string }>(
-      "SELECT id, url, name FROM feeds WHERE is_active = 1"
+    const activeFeeds = db.all<{ id: string; url: string; name: string; language?: string }>(
+      "SELECT id, url, name, language FROM feeds WHERE is_active = 1"
     );
 
     let totalArticlesFound = 0;
@@ -237,14 +237,56 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
     // Process each feed
     for (const feed of activeFeeds) {
       try {
-        // TODO: Implement actual RSS parsing
-        // This is where RSS feed parsing would happen:
-        // 1. Fetch RSS feed from feed.url
-        // 2. Parse XML to extract articles
-        // 3. Process each article with language detection
-        // 4. Insert new articles into database
-        
         console.log(`Polling feed: ${feed.name} (${feed.url})`);
+        
+        const feedArticles = await fetchAndParseRSSFeed(feed.url);
+        console.log(`Found ${feedArticles.length} articles in ${feed.name}`);
+        
+        let newArticles = 0;
+        
+        for (const article of feedArticles) {
+          // Check if article already exists by URL
+          const existing = db.get<{ id: string }>(
+            "SELECT id FROM articles WHERE url = ?", 
+            [article.url]
+          );
+          
+          if (!existing && article.url && article.title) {
+            // Detect language for the article
+            const languageResult = detectArticleLanguage({
+              title: article.title,
+              description: article.description,
+              content: article.content,
+              url: article.url
+            });
+            
+            // Insert new article
+            const articleId = generateUUID();
+            db.run(`
+              INSERT INTO articles (
+                id, feed_id, title, description, content, url, 
+                detected_language, needs_manual_language_review,
+                published_at, scraped_at, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              articleId,
+              feed.id,
+              article.title,
+              article.description,
+              article.content,
+              article.url,
+              languageResult.detectedLanguage,
+              languageResult.needsManualReview,
+              article.pubDate || new Date().toISOString(),
+              new Date().toISOString(),
+              new Date().toISOString()
+            ]);
+            
+            newArticles++;
+          }
+        }
+        
+        totalArticlesFound += newArticles;
         
         // Update feed timestamp to track polling activity
         db.run(
@@ -253,8 +295,10 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
           feed.id
         );
         
-        // For now, no articles are processed since RSS parsing is not implemented
-        totalArticlesFound += 0;
+        if (newArticles > 0) {
+          console.log(`Added ${newArticles} new articles from ${feed.name}`);
+        }
+        
       } catch (error) {
         console.error(`Failed to poll feed ${feed.name}: ${error}`);
       }
@@ -270,4 +314,72 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
     pollingState.failedPolls++;
     throw error;
   }
+}
+
+// RSS parsing function
+async function fetchAndParseRSSFeed(feedUrl: string): Promise<Array<{
+  title: string;
+  url: string;
+  description?: string;
+  content?: string;
+  pubDate?: string;
+  author?: string;
+  guid?: string;
+}>> {
+  const Parser = (await import('rss-parser')).default;
+  const parser = new Parser({
+    timeout: 10000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; GlobalNewsLetter/1.0)'
+    },
+    customFields: {
+      item: [
+        ['content:encoded', 'contentEncoded'],
+        ['dc:creator', 'creator']
+      ]
+    }
+  });
+
+  try {
+    const feed = await parser.parseURL(feedUrl);
+    
+    return feed.items.map(item => ({
+      title: item.title || 'Untitled',
+      url: item.link || item.guid || '',
+      description: item.contentSnippet || item.summary,
+      content: (item as any).contentEncoded || item.content,
+      pubDate: item.pubDate || item.isoDate,
+      author: item.creator || (item as any).author,
+      guid: item.guid
+    }));
+  } catch (error) {
+    throw new Error(`Failed to parse RSS feed ${feedUrl}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Language detection function  
+function detectArticleLanguage(article: {
+  title: string;
+  description?: string;
+  content?: string;
+  url: string;
+}): {
+  detectedLanguage: string | null;
+  needsManualReview: boolean;
+} {
+  const { LanguageDetectionService } = require('../services/language-detection.js');
+  const detector = new LanguageDetectionService();
+  
+  const result = detector.detectArticleLanguage(article);
+  
+  return {
+    detectedLanguage: result.detectedLanguage,
+    needsManualReview: result.needsManualReview
+  };
+}
+
+// UUID generation function
+function generateUUID(): string {
+  const { v4: uuidv4 } = require('uuid');
+  return uuidv4();
 }

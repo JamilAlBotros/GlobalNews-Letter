@@ -1,64 +1,26 @@
 'use client';
 
 import { Activity, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+
+interface FeedHealth {
+  feed_id: string;
+  feed_name: string;
+  status: 'healthy' | 'warning' | 'critical';
+  success_rate: number;
+  avg_response_time: number;
+  last_successful_fetch: string;
+  consecutive_failures: number;
+  total_fetches_24h: number;
+  successful_fetches_24h: number;
+  avg_articles_per_fetch: number;
+}
+
+interface FeedHealthResponse {
+  feed_health: FeedHealth[];
+}
 
 export function FeedHealthMonitor() {
-  // Mock data for development
-  const mockHealth = {
-    feed_health: [
-      {
-        feed_id: 'reuters-business-feed',
-        feed_name: 'Reuters Business News',
-        status: 'healthy',
-        success_rate: 0.98,
-        avg_response_time: 1200,
-        last_successful_fetch: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        consecutive_failures: 0,
-        total_fetches_24h: 24,
-        successful_fetches_24h: 24,
-        avg_articles_per_fetch: 15,
-      },
-      {
-        feed_id: 'techcrunch-main-feed',
-        feed_name: 'TechCrunch Main Feed',
-        status: 'healthy',
-        success_rate: 0.95,
-        avg_response_time: 1800,
-        last_successful_fetch: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        consecutive_failures: 0,
-        total_fetches_24h: 24,
-        successful_fetches_24h: 23,
-        avg_articles_per_fetch: 12,
-      },
-      {
-        feed_id: 'elpais-salud-feed',
-        feed_name: 'El País - Sección Salud',
-        status: 'warning',
-        success_rate: 0.83,
-        avg_response_time: 3200,
-        last_successful_fetch: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-        consecutive_failures: 2,
-        total_fetches_24h: 16,
-        successful_fetches_24h: 13,
-        avg_articles_per_fetch: 8,
-      },
-      {
-        feed_id: 'broken-feed',
-        feed_name: 'Example Broken Feed',
-        status: 'critical',
-        success_rate: 0.12,
-        avg_response_time: 5000,
-        last_successful_fetch: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-        consecutive_failures: 12,
-        total_fetches_24h: 24,
-        successful_fetches_24h: 3,
-        avg_articles_per_fetch: 2,
-      },
-    ],
-  };
-
-  // Use mock data since API is not implemented
-  const healthData = mockHealth;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -97,6 +59,19 @@ export function FeedHealthMonitor() {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
+  const { data: healthData, isLoading, error } = useQuery<FeedHealthResponse>({
+    queryKey: ['feed-health'],
+    queryFn: async () => {
+      // TODO: Implement actual feed health API endpoint
+      return { feed_health: [] } as FeedHealthResponse;
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  if (isLoading) {
+    return <div className="bg-white rounded-lg shadow p-6">Loading feed health data...</div>;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -105,7 +80,13 @@ export function FeedHealthMonitor() {
       
       <div className="p-6">
         <div className="space-y-4">
-          {healthData.feed_health.map((feed) => (
+          {!healthData?.feed_health || healthData.feed_health.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No feeds to monitor</h3>
+              <p className="mt-1 text-sm text-gray-500">Feed health data will appear here once feeds are configured.</p>
+            </div>
+          ) : healthData.feed_health.map((feed) => (
             <div
               key={feed.feed_id}
               className={`p-4 rounded-lg border ${getStatusColor(feed.status)}`}

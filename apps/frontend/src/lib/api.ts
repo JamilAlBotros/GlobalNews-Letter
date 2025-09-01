@@ -172,9 +172,13 @@ class ApiClient {
     }
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(fetchOptions.headers as Record<string, string> || {}),
     };
+    
+    // Only set Content-Type if there's a body
+    if (fetchOptions.body) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Add idempotency key for POST requests
     if (idempotencyKey && fetchOptions.method === 'POST') {

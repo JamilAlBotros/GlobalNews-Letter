@@ -5,8 +5,6 @@ import { apiClient } from '@/lib/api';
 import { Clock, Globe, FileText, Languages } from 'lucide-react';
 
 export function RecentActivity() {
-  // TODO: Connect to actual activity service
-  const mockActivity: any[] = [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,35 +44,13 @@ export function RecentActivity() {
       </div>
       
       <div className="divide-y divide-gray-200">
-        {mockActivity.map((activity) => {
-          const Icon = activity.icon;
-          
-          return (
-            <div key={activity.id} className="px-6 py-4 hover:bg-gray-50">
-              <div className="flex items-start space-x-4">
-                <div className={`p-2 rounded-lg ${getStatusColor(activity.status)}`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.title}
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-3 w-3 text-gray-400" />
-                      <p className="text-xs text-gray-500">
-                        {formatRelativeTime(activity.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {activity.description}
-                  </p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        <div className="px-6 py-8 text-center">
+          <div className="text-gray-500">
+            <FileText className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No recent activity</h3>
+            <p className="mt-1 text-sm text-gray-500">Activity will appear here once the system is in use.</p>
+          </div>
+        </div>
       </div>
       
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">

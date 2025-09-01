@@ -23,9 +23,6 @@ const GenerateFromArticlesInput = z.object({
   force_language: z.enum(['ltr', 'rtl']).optional()
 });
 
-const PreviewInput = z.object({
-  language: z.enum(['ltr', 'rtl']).default('ltr')
-});
 
 export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
   const db = getDatabase();
@@ -82,7 +79,13 @@ export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      const html = newsletterService.generateFromArticles(articles, {
+      // Convert null descriptions to undefined to match service interface
+      const formattedArticles = articles.map(article => ({
+        ...article,
+        description: article.description ?? undefined
+      }));
+
+      const html = newsletterService.generateFromArticles(formattedArticles, {
         newsletterTitle: body.newsletter_title,
         intro: body.intro,
         footer: body.footer,
@@ -103,23 +106,6 @@ export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  // Generate preview newsletter
-  app.post("/newsletter/preview", async (request, reply) => {
-    const body = PreviewInput.parse(request.body);
-    
-    try {
-      const html = newsletterService.generatePreview(body.language);
-      
-      return reply
-        .header('Content-Type', 'text/html')
-        .send(html);
-    } catch (error) {
-      throw Object.assign(new Error("Failed to generate preview newsletter"), {
-        status: 500,
-        detail: (error as Error).message
-      });
-    }
-  });
 
   // Get latest articles for newsletter creation
   app.get("/newsletter/latest-articles", async (request, reply) => {

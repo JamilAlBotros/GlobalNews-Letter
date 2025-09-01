@@ -298,6 +298,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     
     const jobs = result.data.map(job => ({
       ...job,
+      description: job.description || undefined,
       feed_filters: JSON.parse(job.feed_filters),
       last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
     }));
@@ -329,6 +330,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     
     const response = {
       ...job,
+      description: job.description || undefined,
       feed_filters: JSON.parse(job.feed_filters),
       last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
     };
@@ -353,6 +355,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     
     const response = {
       ...job,
+      description: job.description || undefined,
       feed_filters: JSON.parse(job.feed_filters),
       last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
     };
@@ -375,6 +378,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     
     const response = {
       ...job,
+      description: job.description || undefined,
       feed_filters: JSON.parse(job.feed_filters),
       last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
     };

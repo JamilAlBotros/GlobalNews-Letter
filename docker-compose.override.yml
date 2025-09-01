@@ -1,12 +1,8 @@
 # Development overrides for docker-compose
 # This file is automatically loaded by docker-compose
-version: '3.8'
 
 services:
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile.dev
     volumes:
       - ./apps/api:/app/apps/api
       - ./packages:/app/packages
@@ -16,9 +12,6 @@ services:
     command: ["npm", "run", "dev"]
 
   frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile.dev
     volumes:
       - ./apps/frontend:/app/apps/frontend
       - /app/node_modules

@@ -27,15 +27,11 @@ COPY tsconfig*.json ./
 
 # Build contracts first
 RUN pnpm build --workspace=@mtrx/contracts
-
-# Build the frontend application
+# Build the frontend application  
 RUN pnpm build --workspace=apps/frontend
 
 # Production stage
 FROM node:20-alpine AS runtime
-
-# Install TypeScript globally for development commands
-RUN npm install -g typescript
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -44,16 +40,11 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy built application
+# Copy built application  
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/standalone ./
-COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
-
-# Copy source files and config for development commands
-COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/src ./apps/frontend/src
-COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/tsconfig*.json ./apps/frontend/
-COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/package.json ./apps/frontend/
-COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/src ./packages/contracts/src
-COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/tsconfig*.json ./packages/contracts/
+COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/static ./.next/static
+# Create public directory
+RUN mkdir -p ./public
 
 # Switch to non-root user
 USER nodejs

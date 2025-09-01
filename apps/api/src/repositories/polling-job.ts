@@ -1,5 +1,4 @@
-import { Database } from "better-sqlite3";
-import { getDatabase } from "../database/connection.js";
+import { getDatabase, type DatabaseConnection } from "../database/connection.js";
 import { v4 as uuidv4 } from "uuid";
 
 export interface DatabasePollingJob {
@@ -49,7 +48,7 @@ export interface UpdatePollingJobData {
 }
 
 export class PollingJobRepository {
-  private db: Database;
+  private db: DatabaseConnection;
 
   constructor() {
     this.db = getDatabase();
@@ -58,28 +57,25 @@ export class PollingJobRepository {
   findAll(page: number = 1, limit: number = 20): { data: DatabasePollingJob[]; total: number } {
     const offset = (page - 1) * limit;
     
-    const countStmt = this.db.prepare('SELECT COUNT(*) as count FROM polling_jobs');
-    const total = (countStmt.get() as { count: number }).count;
+    const totalResult = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM polling_jobs');
+    const total = totalResult?.count || 0;
     
-    const stmt = this.db.prepare(`
+    const data = this.db.all<DatabasePollingJob>(`
       SELECT * FROM polling_jobs 
       ORDER BY created_at DESC 
       LIMIT ? OFFSET ?
-    `);
-    
-    const data = stmt.all(limit, offset) as DatabasePollingJob[];
+    `, limit, offset);
     
     return { data, total };
   }
 
   findActive(): DatabasePollingJob[] {
-    const stmt = this.db.prepare('SELECT * FROM polling_jobs WHERE is_active = TRUE ORDER BY next_run_time ASC');
-    return stmt.all() as DatabasePollingJob[];
+    return this.db.all<DatabasePollingJob>('SELECT * FROM polling_jobs WHERE is_active = TRUE ORDER BY next_run_time ASC');
   }
 
   findById(id: string): DatabasePollingJob | null {
-    const stmt = this.db.prepare('SELECT * FROM polling_jobs WHERE id = ?');
-    return (stmt.get(id) as DatabasePollingJob) || null;
+    const result = this.db.get<DatabasePollingJob>('SELECT * FROM polling_jobs WHERE id = ?', id);
+    return result || null;
   }
 
   create(data: CreatePollingJobData): DatabasePollingJob {
@@ -87,14 +83,12 @@ export class PollingJobRepository {
     const now = new Date().toISOString();
     const nextRunTime = new Date(Date.now() + data.interval_minutes * 60 * 1000).toISOString();
 
-    const stmt = this.db.prepare(`
+    const result = this.db.run(`
       INSERT INTO polling_jobs (
         id, name, description, is_active, interval_minutes, feed_filters,
         next_run_time, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
+    `,
       id,
       data.name,
       data.description || null,
@@ -171,13 +165,11 @@ export class PollingJobRepository {
     values.push(now);
     values.push(id);
 
-    const stmt = this.db.prepare(`
+    const result = this.db.run(`
       UPDATE polling_jobs 
       SET ${updates.join(', ')} 
       WHERE id = ?
-    `);
-
-    const result = stmt.run(...values);
+    `, ...values);
 
     if (result.changes === 0) {
       throw new Error('Failed to update polling job');
@@ -187,8 +179,7 @@ export class PollingJobRepository {
   }
 
   delete(id: string): boolean {
-    const stmt = this.db.prepare('DELETE FROM polling_jobs WHERE id = ?');
-    const result = stmt.run(id);
+    const result = this.db.run('DELETE FROM polling_jobs WHERE id = ?', id);
     return result.changes > 0;
   }
 
@@ -199,7 +190,7 @@ export class PollingJobRepository {
     const now = new Date().toISOString();
     const nextRunTime = new Date(Date.now() + job.interval_minutes * 60 * 1000).toISOString();
 
-    const stmt = this.db.prepare(`
+    this.db.run(`
       UPDATE polling_jobs 
       SET 
         last_run_time = ?,
@@ -210,9 +201,7 @@ export class PollingJobRepository {
         last_run_stats = ?,
         updated_at = ?
       WHERE id = ?
-    `);
-
-    stmt.run(
+    `,
       now,
       job.is_active ? nextRunTime : null,
       success ? 1 : 0,
@@ -225,14 +214,13 @@ export class PollingJobRepository {
 
   findJobsDueForExecution(): DatabasePollingJob[] {
     const now = new Date().toISOString();
-    const stmt = this.db.prepare(`
+    return this.db.all<DatabasePollingJob>(`
       SELECT * FROM polling_jobs 
       WHERE is_active = TRUE 
       AND next_run_time IS NOT NULL 
       AND next_run_time <= ? 
       ORDER BY next_run_time ASC
-    `);
-    return stmt.all(now) as DatabasePollingJob[];
+    `, now);
   }
 }
 

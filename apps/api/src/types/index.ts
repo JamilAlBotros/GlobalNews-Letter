@@ -65,23 +65,22 @@ export const ArticleSchema = z.object({
 
 export type Article = z.infer<typeof ArticleSchema>;
 
-// Database schemas (SQLite format)
+// Database schemas (SQLite format) - matches actual DB schema
 export const DatabaseArticleSchema = z.object({
   id: z.string(),
+  feed_id: z.string(),
+  detected_language: z.string().nullable(),
+  needs_manual_language_review: z.number().nullable(), // SQLite boolean as 0/1
   title: z.string(),
-  author: z.string().nullable(),
   description: z.string().nullable(),
-  url: z.string(),
-  imageUrl: z.string().nullable(),
-  publishedAt: z.string(), // SQLite stores as ISO string
   content: z.string().nullable(),
-  category: z.string(),
-  source: z.string(),
+  url: z.string(),
+  published_at: z.string(),
+  scraped_at: z.string(),
+  created_at: z.string(),
+  // Enhanced fields from Phase 1
   summary: z.string().nullable(),
-  language: z.string(),
-  originalLanguage: z.string(),
-  isSelected: z.number(), // SQLite stores boolean as 0/1
-  createdAt: z.string(), // SQLite stores as ISO string
+  original_language: z.string().nullable(),
 });
 
 export type DatabaseArticle = z.infer<typeof DatabaseArticleSchema>;
@@ -118,17 +117,21 @@ export const RSSFeedSchema = z.object({
 
 export type RSSFeed = z.infer<typeof RSSFeedSchema>;
 
-// Database RSS Feed schema
+// Database RSS Feed schema - matches actual DB schema
 export const DatabaseRSSFeedSchema = z.object({
   id: z.string(),
   name: z.string(),
   url: z.string(),
-  category: z.string(),
   language: z.string(),
-  isActive: z.number(), // SQLite stores boolean as 0/1
-  lastFetched: z.string().nullable(), // SQLite stores as ISO string
-  createdAt: z.string(), // SQLite stores as ISO string
-  description: z.string().nullable(),
+  region: z.string(),
+  category: z.string(),
+  type: z.string(),
+  is_active: z.number(), // SQLite stores boolean as 0/1
+  created_at: z.string(),
+  updated_at: z.string(),
+  // Enhanced fields (may not exist in all records)
+  last_fetched: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
 });
 
 export type DatabaseRSSFeed = z.infer<typeof DatabaseRSSFeedSchema>;
@@ -297,44 +300,8 @@ export const isCategoryCode = (value: string): value is Category => {
 };
 
 // Transformation utilities
-export function databaseArticleToArticle(dbArticle: DatabaseArticle): Article {
-  return {
-    ...dbArticle,
-    publishedAt: new Date(dbArticle.publishedAt),
-    createdAt: new Date(dbArticle.createdAt),
-    isSelected: dbArticle.isSelected === 1,
-    language: dbArticle.language as Language,
-    originalLanguage: dbArticle.originalLanguage as Language,
-    category: dbArticle.category as Category,
-  };
-}
+// Note: Database schema differs significantly from application schema
+// These functions would need adaptation based on actual business needs
 
-export function articleToDatabaseArticle(article: Article): DatabaseArticle {
-  return {
-    ...article,
-    publishedAt: article.publishedAt.toISOString(),
-    createdAt: article.createdAt.toISOString(),
-    isSelected: article.isSelected ? 1 : 0,
-  };
-}
-
-export function databaseRSSFeedToRSSFeed(dbFeed: DatabaseRSSFeed): RSSFeed {
-  return {
-    ...dbFeed,
-    lastFetched: dbFeed.lastFetched ? new Date(dbFeed.lastFetched) : null,
-    createdAt: new Date(dbFeed.createdAt),
-    isActive: dbFeed.isActive === 1,
-    language: dbFeed.language as Language,
-    category: dbFeed.category as Category,
-  };
-}
-
-export function rssFeedToDatabaseRSSFeed(feed: RSSFeed): DatabaseRSSFeed {
-  return {
-    ...feed,
-    lastFetched: feed.lastFetched?.toISOString() || null,
-    createdAt: feed.createdAt.toISOString(),
-    isActive: feed.isActive ? 1 : 0,
-    description: feed.description || null,
-  };
-}
+// Transformation functions would go here when needed
+// For now, work directly with database types in repositories

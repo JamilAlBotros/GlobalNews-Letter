@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { newsletterService, NewsletterData, NewsletterLanguage } from "../services/newsletter.js";
 import { getDatabase } from "../database/connection.js";
+import { articleRepository } from "../repositories/index.js";
 
 const GenerateNewsletterInput = z.object({
   title: z.string().min(1, "Title is required"),
@@ -58,19 +59,14 @@ export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
     const body = GenerateFromArticlesInput.parse(request.body);
     
     try {
-      // Fetch articles from database
-      const placeholders = body.article_ids.map(() => '?').join(',');
-      const articles = db.all(`
-        SELECT id, title, url, description, detected_language 
-        FROM articles 
-        WHERE id IN (${placeholders})
-      `, body.article_ids) as Array<{
-        id: string;
-        title: string;
-        url: string;
-        description: string | null;
-        detected_language: string | null;
-      }>;
+      // Fetch articles from database using repository
+      const dbArticles = body.article_ids.map(id => articleRepository.findById(id)).filter(Boolean);
+      const articles = dbArticles.map(article => ({
+        title: article!.title,
+        url: article!.url,
+        description: article!.description,
+        detected_language: article!.detected_language
+      }));
 
       if (articles.length === 0) {
         throw Object.assign(new Error("No articles found"), {

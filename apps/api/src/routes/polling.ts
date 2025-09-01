@@ -14,6 +14,7 @@ import {
 import { getDatabase } from "../database/connection.js";
 import { LLMService } from "../services/llm.js";
 import { ErrorHandler } from "../utils/errors.js";
+import { articleRepository, feedRepository } from "../repositories/index.js";
 import type { DatabaseArticle, DatabaseRSSFeed, Language, Category } from "../types/index.js";
 
 // Global polling state
@@ -33,9 +34,8 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
   // Get current polling status
   app.get("/polling/status", async (request, reply) => {
-    const activeFeedsCount = db.get<{ count: number }>(
-      "SELECT COUNT(*) as count FROM feeds WHERE is_active = 1"
-    )?.count || 0;
+    const feedStats = feedRepository.getStatistics();
+    const activeFeedsCount = feedStats.active;
 
     const nextPollTime = pollingState.isRunning && pollingState.lastPollTime
       ? new Date(new Date(pollingState.lastPollTime).getTime() + pollingState.intervalMinutes * 60 * 1000).toISOString()
@@ -172,17 +172,12 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
   // Get active feeds status
   app.get("/polling/feeds/status", async (request, reply) => {
-    const feeds = db.all<{
-      id: string;
-      name: string;
-      url: string;
-      updated_at: string;
-    }>("SELECT id, name, url, updated_at FROM feeds WHERE is_active = 1");
+    const feeds = feedRepository.findActive();
 
     const feedStatuses = feeds.map(feed => {
       // Real implementation would track actual feed metrics in database
       // For now, return basic status based on feed data
-      const lastFetchTime = feed.updated_at;
+      const lastFetchTime = feed.last_fetched;
       const nextFetchTime = pollingState.isRunning
         ? new Date(Date.now() + pollingState.intervalMinutes * 60 * 1000).toISOString()
         : null;
@@ -192,7 +187,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
         feed_name: feed.name,
         feed_url: feed.url,
         status: "unknown",
-        last_fetch_time: lastFetchTime,
+        last_fetch_time: lastFetchTime || null,
         next_fetch_time: nextFetchTime,
         success_rate: 0,
         consecutive_failures: 0,
@@ -226,15 +221,14 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 // Helper function to execute a poll
 async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: number }> {
   const db = getDatabase();
+  const llmService = new LLMService();
   
   try {
     pollingState.lastPollTime = new Date().toISOString();
     pollingState.totalPolls++;
 
     // Get active feeds
-    const activeFeeds = db.all<{ id: string; url: string; name: string; language?: string }>(
-      "SELECT id, url, name, language FROM feeds WHERE is_active = 1"
-    );
+    const activeFeeds = feedRepository.findActive();
 
     let totalArticlesFound = 0;
 
@@ -249,40 +243,32 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
         let newArticles = 0;
         
         for (const article of feedArticles) {
-          // Check if article already exists by URL
-          const existing = db.get<{ id: string }>(
-            "SELECT id FROM articles WHERE url = ?", 
-            [article.url]
-          );
+          if (!article.url || !article.title) continue;
           
-          if (!existing && article.url && article.title) {
+          // Check if article already exists by URL
+          const existing = articleRepository.findByUrl(article.url);
+          
+          if (!existing) {
             // Process article with enhanced LLM integration
             const processedArticle = await processArticleWithLLM(article, feed, llmService);
             
-            // Insert new article
+            // Insert new article using repository
             const articleId = generateUUID();
-            db.run(`
-              INSERT INTO articles (
-                id, feed_id, title, description, content, url, 
-                detected_language, needs_manual_language_review,
-                summary, original_language,
-                published_at, scraped_at, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-              articleId,
-              feed.id,
-              processedArticle.title,
-              processedArticle.description,
-              processedArticle.content,
-              processedArticle.url,
-              processedArticle.detectedLanguage,
-              processedArticle.needsManualReview,
-              processedArticle.summary,
-              processedArticle.originalLanguage,
-              processedArticle.pubDate || new Date().toISOString(),
-              new Date().toISOString(),
-              new Date().toISOString()
-            ]);
+            articleRepository.create({
+              id: articleId,
+              feed_id: feed.id,
+              title: processedArticle.title,
+              description: processedArticle.description || null,
+              content: processedArticle.content || null,
+              url: processedArticle.url,
+              detected_language: processedArticle.detectedLanguage,
+              needs_manual_language_review: processedArticle.needsManualReview,
+              summary: processedArticle.summary || null,
+              original_language: processedArticle.originalLanguage,
+              published_at: processedArticle.pubDate || new Date().toISOString(),
+              scraped_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            });
             
             newArticles++;
           }
@@ -291,11 +277,7 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
         totalArticlesFound += newArticles;
         
         // Update feed timestamp to track polling activity
-        db.run(
-          "UPDATE feeds SET updated_at = ? WHERE id = ?",
-          new Date().toISOString(),
-          feed.id
-        );
+        feedRepository.updateLastFetched(feed.id);
         
         if (newArticles > 0) {
           console.log(`Added ${newArticles} new articles from ${feed.name}`);
@@ -391,7 +373,7 @@ async function processArticleWithLLM(
     author?: string;
     guid?: string;
   },
-  feed: DatabaseRSSFeed,
+  feed: { id: string; url: string; name: string; language?: string },
   llmService: LLMService
 ): Promise<{
   title: string;
@@ -437,8 +419,8 @@ async function processArticleWithLLM(
       if (detectedLanguage) {
         const { summary: generatedSummary } = await llmService.processArticle(
           article.title,
-          article.description,
-          article.content,
+          article.description || null,
+          article.content || null,
           detectedLanguage as any // Type assertion for supported languages
         );
         summary = generatedSummary;

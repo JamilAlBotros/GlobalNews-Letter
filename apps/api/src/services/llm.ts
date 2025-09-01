@@ -53,7 +53,7 @@ const TranslationResponseSchema = z.object({
 export class LLMService {
   private readonly config = llmConfig;
   private readonly baseUrl: string;
-  private readonly headers: Record<string, string>;
+  private readonly headers: Record<string, string> = {};
 
   constructor() {
     if (this.config.mockInDev) {

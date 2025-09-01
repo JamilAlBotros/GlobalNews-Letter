@@ -255,6 +255,23 @@ class ApiClient {
     });
   }
 
+  async validateRSSFeed(url: string) {
+    return this.request<{
+      url: string;
+      validation_result: {
+        isValid: boolean;
+        message: string;
+        hasEntries?: boolean;
+        feedTitle?: string;
+        entryCount?: number;
+      };
+      timestamp: string;
+    }>('/feeds/validate', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+  }
+
   // Articles
   async getArticles(page: number = 1, limit: number = 20, feedId?: string) {
     try {

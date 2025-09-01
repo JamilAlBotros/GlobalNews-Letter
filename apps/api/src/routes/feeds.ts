@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Feed, CreateFeedInput, UpdateFeedInput } from "../schemas/feed.js";
 import { PaginationQuery } from "../schemas/common.js";
 import { getDatabase } from "../database/connection.js";
+import { validateRSSFeed, RSSValidationError } from "../utils/rss-validator.js";
 
 interface FeedRow {
   id: string;
@@ -63,6 +64,23 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.post("/feeds", async (request, reply) => {
     const input = CreateFeedInput.parse(request.body);
     
+    // Step 1: Validate RSS feed before proceeding
+    const validationResult = await validateRSSFeed({ url: input.url });
+    
+    if (!validationResult.isValid) {
+      return reply.code(400).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Invalid RSS Feed",
+        status: 400,
+        detail: `RSS validation failed: ${validationResult.message}`,
+        instance: request.url,
+        extensions: {
+          validation_result: validationResult
+        }
+      });
+    }
+
+    // Step 2: Check for existing feed
     const existingFeed = db.get<FeedRow>(
       "SELECT id FROM feeds WHERE url = ?",
       input.url
@@ -77,6 +95,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    // Step 3: Create feed if validation passed
     const id = uuidv4();
     const now = new Date().toISOString();
 
@@ -91,7 +110,48 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     }
 
     reply.code(201);
-    return mapFeedRow(newFeed);
+    return {
+      ...mapFeedRow(newFeed),
+      validation_info: {
+        message: validationResult.message,
+        has_entries: validationResult.hasEntries,
+        entry_count: validationResult.entryCount,
+        feed_title: validationResult.feedTitle
+      }
+    };
+  });
+
+  // RSS validation endpoint - test feed without creating it
+  app.post("/feeds/validate", async (request, reply) => {
+    const { url } = request.body as { url: string };
+    
+    if (!url) {
+      return reply.code(400).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Missing URL",
+        status: 400,
+        detail: "URL is required for RSS validation",
+        instance: request.url
+      });
+    }
+
+    try {
+      const validationResult = await validateRSSFeed({ url });
+      
+      return {
+        url,
+        validation_result: validationResult,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      return reply.code(500).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Validation Error",
+        status: 500,
+        detail: `Failed to validate RSS feed: ${error.message}`,
+        instance: request.url
+      });
+    }
   });
 
   app.get("/feeds/:id", async (request, reply) => {

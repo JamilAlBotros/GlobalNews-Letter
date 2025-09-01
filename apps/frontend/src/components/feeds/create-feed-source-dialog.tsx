@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { X } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
 const createFeedSourceSchema = z.object({
@@ -28,11 +28,17 @@ interface CreateFeedSourceDialogProps {
 
 export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDialogProps) {
   const queryClient = useQueryClient();
+  const [validationState, setValidationState] = useState<{
+    status: 'idle' | 'loading' | 'success' | 'error';
+    result?: any;
+    showForceDialog?: boolean;
+  }>({ status: 'idle' });
   
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CreateFeedSourceData>({
     resolver: zodResolver(createFeedSourceSchema),
@@ -42,6 +48,25 @@ export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDial
       content_category: 'general',
       content_type: 'daily',
       quality_score: 0.5,
+    },
+  });
+
+  const currentUrl = watch('base_url');
+
+  const validateMutation = useMutation({
+    mutationFn: (url: string) => apiClient.validateRSSFeed(url),
+    onSuccess: (data) => {
+      setValidationState({
+        status: data.validation_result.isValid ? 'success' : 'error',
+        result: data.validation_result,
+        showForceDialog: !data.validation_result.isValid
+      });
+    },
+    onError: () => {
+      setValidationState({
+        status: 'error',
+        result: { isValid: false, message: 'Failed to validate RSS feed' }
+      });
     },
   });
 
@@ -76,12 +101,41 @@ export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDial
     },
   });
 
+  const validateRSSFeed = () => {
+    if (currentUrl && createFeedSourceSchema.shape.base_url.safeParse(currentUrl).success) {
+      setValidationState({ status: 'loading' });
+      validateMutation.mutate(currentUrl);
+    }
+  };
+
   const onSubmit = (data: CreateFeedSourceData) => {
+    // Only validate RSS feeds
+    if (data.provider_type === 'rss') {
+      if (validationState.status === 'idle') {
+        // Validate first if not already validated
+        setValidationState({ status: 'loading' });
+        validateMutation.mutate(data.base_url);
+        return;
+      }
+      
+      if (validationState.status === 'error') {
+        // Show confirmation dialog for failed validation
+        setValidationState(prev => ({ ...prev, showForceDialog: true }));
+        return;
+      }
+    }
+    
+    createMutation.mutate(data);
+  };
+
+  const forceCreateFeed = (data: CreateFeedSourceData) => {
+    setValidationState(prev => ({ ...prev, showForceDialog: false }));
     createMutation.mutate(data);
   };
 
   const handleClose = () => {
     reset();
+    setValidationState({ status: 'idle' });
     onClose();
   };
 
@@ -129,6 +183,51 @@ export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDial
               />
               {errors.base_url && (
                 <p className="mt-1 text-sm text-red-600">{errors.base_url.message}</p>
+              )}
+              
+              {/* RSS Validation Button */}
+              {watch('provider_type') === 'rss' && currentUrl && !errors.base_url && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={validateRSSFeed}
+                    disabled={validateMutation.isPending}
+                    className="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {validateMutation.isPending ? (
+                      <>
+                        <Loader className="w-3 h-3 mr-1 animate-spin" />
+                        Validating...
+                      </>
+                    ) : (
+                      'Test RSS Feed'
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Validation Status */}
+              {validationState.status === 'success' && validationState.result && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                    <p className="text-sm text-green-700">{validationState.result.message}</p>
+                  </div>
+                  {validationState.result.feedTitle && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Feed: {validationState.result.feedTitle} ({validationState.result.entryCount} entries)
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {validationState.status === 'error' && validationState.result && !validationState.showForceDialog && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
+                    <p className="text-sm text-red-700">{validationState.result.message}</p>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -264,6 +363,52 @@ export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDial
             <p className="text-sm text-red-600">
               Failed to create feed source: {(createMutation.error as Error).message}
             </p>
+          </div>
+        )}
+
+        {/* Force Creation Dialog */}
+        {validationState.showForceDialog && validationState.result && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                  <h3 className="text-lg font-medium text-gray-900">RSS Feed Validation Failed</h3>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  The RSS feed could not be validated:
+                </p>
+                <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                  {validationState.result.message}
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Would you like to create the feed source anyway? Note that it may not work correctly during content fetching.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setValidationState(prev => ({ ...prev, showForceDialog: false }))}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const formData = watch();
+                    forceCreateFeed(formData as CreateFeedSourceData);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Create Anyway
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -154,12 +154,11 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
   // Wipe database
   app.delete("/admin/database", async (request, reply) => {
     try {
-      const tables = ['articles', 'feeds'];
+      const tables = ['translation_jobs', 'articles', 'feeds'];
       
-      // Clear all tables
+      // Clear all tables (order matters for foreign keys)
       for (const table of tables) {
         db.exec(`DELETE FROM ${table}`);
-        db.exec(`DELETE FROM sqlite_sequence WHERE name='${table}'`);
       }
       
       // Vacuum to reclaim space

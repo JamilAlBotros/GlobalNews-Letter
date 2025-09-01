@@ -13,10 +13,11 @@ export const RSSValidationInput = z.object({
   timeout: z.number().optional().default(10000)
 });
 
-export type RSSValidationInput = z.infer<typeof RSSValidationInput>;
+export type RSSValidationInputType = z.input<typeof RSSValidationInput>;
 
-export async function validateRSSFeed(input: RSSValidationInput): Promise<RSSValidationResult> {
-  const { url, timeout } = RSSValidationInput.parse(input);
+export async function validateRSSFeed(input: RSSValidationInputType): Promise<RSSValidationResult> {
+  const validated = RSSValidationInput.parse(input);
+  const { url, timeout } = validated;
 
   try {
     // Import feedparser dynamically to avoid issues with ESM/CJS

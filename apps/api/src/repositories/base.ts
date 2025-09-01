@@ -6,10 +6,8 @@ import { ErrorHandler } from '../utils/errors.js';
  * Follows repository pattern from archive implementation
  */
 export abstract class BaseRepository {
-  protected db: DatabaseConnection;
-
-  constructor() {
-    this.db = getDatabase();
+  protected get db(): DatabaseConnection {
+    return getDatabase();
   }
 
   /**

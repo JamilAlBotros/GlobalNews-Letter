@@ -26,8 +26,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   const db = getDatabase();
-  await db.run("DELETE FROM articles");
-  await db.run("DELETE FROM feeds");
+  db.run("DELETE FROM articles");
+  db.run("DELETE FROM feeds");
 });
 
 test("Guardian RSS feed polling creates articles in database", async () => {

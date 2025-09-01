@@ -110,6 +110,7 @@ export function closeDatabase(): void {
 
 export function resetDatabase(): void {
   closeDatabase();
+  // Force a new connection to be created on next getDatabase() call
 }
 
 process.on("SIGINT", () => closeDatabase());

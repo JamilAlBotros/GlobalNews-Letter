@@ -10,7 +10,7 @@ Optimize for speed, but enforce these minimal guardrails:
 **GENERAL**
 - Node.js 20 LTS, TypeScript strict. Next.js 14+ (App Router) or Vite for FE. Fastify for BE.
 - ESLint + Prettier defaults; keep functions <50 LOC; prefer stdlib and lightweight deps.
-- Monorepo with workspaces; single `@acme/contracts` package is the source of truth.
+- Monorepo with workspaces; single `@mtrx/contracts` package is the source of truth.
 
 **SECURITY**
 - Production: HTTPS required. Local dev may use http://localhost only.
@@ -21,7 +21,7 @@ Optimize for speed, but enforce these minimal guardrails:
 
 **ARCHITECTURE**
 - Start as a modular monolith. Split modules only when scaling or velocity requires it.
-- Use **OpenAPI (default)**; auto-generate TS clients from `@acme/contracts`.
+- Use **OpenAPI (default)**; auto-generate TS clients from `@mtrx/contracts`.
 - SQLite for MVP with WAL; plan Postgres migration via Prisma/Drizzle.
 - Provide `/healthz` and `/readyz`; implement graceful shutdown.
 
@@ -81,8 +81,8 @@ Optimize for speed, but enforce these minimal guardrails:
 ## Contract-First Development
 
 **Always start with contracts:**
-1. Update Zod schemas in `@acme/contracts/src/schemas/`
-2. Update OpenAPI registration in `@acme/contracts/src/openapi.ts`
+1. Update Zod schemas in `@mtrx/contracts/src/schemas/`
+2. Update OpenAPI registration in `@mtrx/contracts/src/openapi.ts`
 3. Regenerate `openapi.json` and `openapi.gen.ts`
 4. Update API routes to match contract
 5. Update client code to use new types

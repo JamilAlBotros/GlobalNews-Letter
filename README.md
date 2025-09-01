@@ -1,13 +1,57 @@
 # 🌍 GlobalNews Letter
 
-A modern RSS news aggregation system with web interface and API backend. Built with TypeScript following MVP-first principles for rapid development and testing.
+Multi-language news aggregation and curation system with AI-enhanced content processing. Built with TypeScript following production-first principles for security, maintainability, and reliability.
+
+## 🚀 Quick Start with Docker
+
+### Development
+```bash
+# Clone and setup
+git clone <repo-url>
+cd GlobalNewsLetter
+
+# Copy environment file and configure
+cp .env.example .env
+# Edit .env with your values
+
+# Start development environment
+npm run docker:dev
+
+# View logs
+npm run docker:logs
+
+# Stop services
+npm run docker:down
+```
+
+### Production
+```bash
+# Set production environment variables
+export POSTGRES_PASSWORD=your-secure-password
+
+# Deploy production stack
+npm run docker:prod
+```
+
+## 📦 Docker Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run docker:build` | Build all images |
+| `npm run docker:up` | Start services (detached) |
+| `npm run docker:dev` | Start with hot-reload |
+| `npm run docker:down` | Stop services |
+| `npm run docker:logs` | View logs |
+| `npm run docker:test` | Run tests in container |
+| `npm run docker:clean` | Clean containers and volumes |
 
 ## ✨ Features
 
-- **RSS Feed Management**: Add, manage, and monitor RSS news feeds
+- **RSS Feed Management**: Add, manage, and monitor RSS news feeds with validation
 - **Multi-Language Support**: English, Spanish, Portuguese, French, Arabic, Chinese, Japanese
-- **Web Interface**: React-based dashboard for feed and article management
-- **REST API**: Fastify-powered backend with OpenAPI documentation
+- **Web Interface**: Next.js 14 dashboard with App Router
+- **REST API**: Fastify backend with OpenAPI documentation
+- **Docker Ready**: Multi-stage builds with security best practices
 - **Type Safety**: Full TypeScript with Zod validation throughout
 - **Modern Stack**: Monorepo with Next.js frontend and Fastify API
 

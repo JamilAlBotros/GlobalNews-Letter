@@ -489,4 +489,220 @@ export class LLMService {
       return false;
     }
   }
+
+  /**
+   * Categorize article content
+   */
+  async categorizeContent(
+    text: string,
+    title?: string,
+    language?: SupportedLanguage
+  ): Promise<{
+    category: 'finance' | 'tech';
+    confidence: number;
+    reasoning?: string;
+    alternativeCategories?: Array<{ category: 'finance' | 'tech'; confidence: number }>;
+  }> {
+    const startTime = Date.now();
+
+    // Mock response in development
+    if (this.config.mockInDev) {
+      return {
+        category: text.toLowerCase().includes('tech') || title?.toLowerCase().includes('tech') ? 'tech' : 'finance',
+        confidence: 0.8,
+        reasoning: '[MOCK] Simple keyword-based classification'
+      };
+    }
+
+    const contentToAnalyze = title ? `Title: ${title}\n\nContent: ${text}` : text;
+    const languageName = language ? this.getLanguageNames()[language] : 'English';
+    
+    const prompt = `Analyze this ${languageName} article and classify it into one of these categories: "finance" or "tech".
+
+Consider these guidelines:
+- Finance: Banking, investments, markets, economics, cryptocurrency, business finance, trading
+- Tech: Software, hardware, AI, startups, programming, gadgets, innovation, digital transformation
+
+Text to classify:
+${contentToAnalyze.slice(0, 2000)}
+
+Respond with only the category name (finance or tech) followed by your confidence (0-1) and a brief reason.
+Format: CATEGORY|CONFIDENCE|REASON`;
+
+    try {
+      const response = await this.callLLM({
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 100,
+        temperature: 0.1
+      });
+
+      const content = response.choices[0]?.message?.content?.trim() || 'finance|0.5|Unable to classify';
+      const parts = content.split('|');
+      
+      const category = (parts[0]?.toLowerCase() === 'tech' ? 'tech' : 'finance') as 'finance' | 'tech';
+      const confidence = Math.max(0, Math.min(1, parseFloat(parts[1]) || 0.5));
+      const reasoning = parts[2] || 'Classification based on content analysis';
+
+      return {
+        category,
+        confidence,
+        reasoning
+      };
+    } catch (error) {
+      ErrorHandler.logError(error as Error, { operation: 'categorizeContent' });
+      // Fallback to simple keyword classification
+      const isFinance = /\b(bank|invest|market|money|financial|economy|trading|stock)\b/i.test(text + ' ' + (title || ''));
+      const isTech = /\b(tech|software|AI|digital|computer|app|innovation|startup)\b/i.test(text + ' ' + (title || ''));
+      
+      return {
+        category: isTech && !isFinance ? 'tech' : 'finance',
+        confidence: 0.6,
+        reasoning: 'Fallback keyword-based classification'
+      };
+    }
+  }
+
+  /**
+   * Assess content quality
+   */
+  async assessContentQuality(
+    text: string,
+    title?: string,
+    url?: string,
+    language?: SupportedLanguage
+  ): Promise<{
+    overallScore: number;
+    readabilityScore: number;
+    informativenessScore: number;
+    credibilityScore: number;
+    engagementScore: number;
+    assessmentDetails: {
+      wordCount: number;
+      sentenceCount: number;
+      avgSentenceLength: number;
+      hasProperStructure: boolean;
+      containsFactualClaims: boolean;
+      tone: 'neutral' | 'positive' | 'negative' | 'mixed';
+      complexityLevel: 'basic' | 'intermediate' | 'advanced';
+    };
+    recommendations?: string[];
+  }> {
+    const startTime = Date.now();
+
+    // Basic text analysis
+    const words = text.split(/\s+/).length;
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+    const avgSentenceLength = sentences > 0 ? words / sentences : 0;
+    
+    // Mock response in development
+    if (this.config.mockInDev) {
+      return {
+        overallScore: 0.75,
+        readabilityScore: 0.8,
+        informativenessScore: 0.7,
+        credibilityScore: 0.8,
+        engagementScore: 0.7,
+        assessmentDetails: {
+          wordCount: words,
+          sentenceCount: sentences,
+          avgSentenceLength,
+          hasProperStructure: true,
+          containsFactualClaims: true,
+          tone: 'neutral',
+          complexityLevel: 'intermediate'
+        },
+        recommendations: ['[MOCK] Consider adding more specific examples', '[MOCK] Improve paragraph structure']
+      };
+    }
+
+    const contentToAnalyze = title ? `Title: ${title}\n\nContent: ${text}` : text;
+    const languageName = language ? this.getLanguageNames()[language] : 'English';
+    
+    const prompt = `Analyze this ${languageName} article for content quality. Assess these aspects (score each 0-1):
+
+1. Readability: Clear, well-structured, easy to understand
+2. Informativeness: Contains useful, specific information
+3. Credibility: Appears factual, well-sourced, trustworthy
+4. Engagement: Interesting, compelling, holds attention
+
+Also determine:
+- Tone: neutral/positive/negative/mixed
+- Complexity: basic/intermediate/advanced
+- Structure quality (true/false)
+- Contains factual claims (true/false)
+
+Text to analyze:
+${contentToAnalyze.slice(0, 3000)}
+
+Format your response as:
+READABILITY|INFORMATIVENESS|CREDIBILITY|ENGAGEMENT|TONE|COMPLEXITY|STRUCTURE|FACTUAL|RECOMMENDATIONS`;
+
+    try {
+      const response = await this.callLLM({
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 200,
+        temperature: 0.1
+      });
+
+      const content = response.choices[0]?.message?.content?.trim() || '0.5|0.5|0.5|0.5|neutral|intermediate|true|true|Improve content quality';
+      const parts = content.split('|');
+      
+      const readabilityScore = Math.max(0, Math.min(1, parseFloat(parts[0]) || 0.5));
+      const informativenessScore = Math.max(0, Math.min(1, parseFloat(parts[1]) || 0.5));
+      const credibilityScore = Math.max(0, Math.min(1, parseFloat(parts[2]) || 0.5));
+      const engagementScore = Math.max(0, Math.min(1, parseFloat(parts[3]) || 0.5));
+      
+      const tone = (['neutral', 'positive', 'negative', 'mixed'].includes(parts[4]) ? parts[4] : 'neutral') as 'neutral' | 'positive' | 'negative' | 'mixed';
+      const complexityLevel = (['basic', 'intermediate', 'advanced'].includes(parts[5]) ? parts[5] : 'intermediate') as 'basic' | 'intermediate' | 'advanced';
+      const hasProperStructure = parts[6]?.toLowerCase() === 'true';
+      const containsFactualClaims = parts[7]?.toLowerCase() === 'true';
+      
+      const overallScore = (readabilityScore + informativenessScore + credibilityScore + engagementScore) / 4;
+      
+      const recommendations = parts[8] ? [parts[8]] : [];
+
+      return {
+        overallScore,
+        readabilityScore,
+        informativenessScore,
+        credibilityScore,
+        engagementScore,
+        assessmentDetails: {
+          wordCount: words,
+          sentenceCount: sentences,
+          avgSentenceLength,
+          hasProperStructure,
+          containsFactualClaims,
+          tone,
+          complexityLevel
+        },
+        recommendations: recommendations.length > 0 ? recommendations : undefined
+      };
+    } catch (error) {
+      ErrorHandler.logError(error as Error, { operation: 'assessContentQuality' });
+      
+      // Fallback to basic assessment
+      const readabilityScore = avgSentenceLength > 15 && avgSentenceLength < 25 ? 0.8 : 0.6;
+      const informativenessScore = words > 100 ? 0.7 : 0.5;
+      const credibilityScore = 0.6; // Default neutral
+      const engagementScore = title ? 0.7 : 0.6;
+      
+      return {
+        overallScore: (readabilityScore + informativenessScore + credibilityScore + engagementScore) / 4,
+        readabilityScore,
+        informativenessScore,
+        credibilityScore,
+        engagementScore,
+        assessmentDetails: {
+          wordCount: words,
+          sentenceCount: sentences,
+          avgSentenceLength,
+          hasProperStructure: sentences > 2,
+          containsFactualClaims: true,
+          tone: 'neutral',
+          complexityLevel: words > 500 ? 'advanced' : words > 200 ? 'intermediate' : 'basic'
+        }
+      };
+    }
+  }
 }

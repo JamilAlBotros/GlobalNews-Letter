@@ -276,10 +276,13 @@ export class FeedRepository extends BaseRepository {
       return acc;
     }, {} as Record<string, number>);
 
-    const recentlyFetched = this.count(
+    // Calculate 24 hours ago in ISO format
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const recentlyFetched = this.executeQuery(
       'recently_fetched_feeds',
-      'SELECT COUNT(*) as count FROM feeds WHERE last_fetched > datetime("now", "-24 hours")'
-    );
+      'SELECT COUNT(*) as count FROM feeds WHERE last_fetched > ?',
+      [twentyFourHoursAgo]
+    ) as { count: number };
 
     return {
       total,
@@ -287,7 +290,7 @@ export class FeedRepository extends BaseRepository {
       inactive,
       byCategory,
       byLanguage,
-      recentlyFetched
+      recentlyFetched: recentlyFetched.count
     };
   }
 
@@ -320,7 +323,7 @@ export class FeedRepository extends BaseRepository {
 
     if (criteria.hasRecentArticles) {
       query += ' LEFT JOIN articles a ON f.id = a.feed_id';
-      conditions.push('a.created_at > datetime("now", "-7 days")');
+      conditions.push('a.created_at > datetime(\'now\', \'-7 days\')');
     }
 
     if (criteria.category) {

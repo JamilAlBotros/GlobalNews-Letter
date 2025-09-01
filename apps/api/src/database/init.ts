@@ -13,6 +13,7 @@ export async function initializeDatabase(): Promise<void> {
       category TEXT NOT NULL,
       type TEXT NOT NULL,
       is_active BOOLEAN DEFAULT TRUE,
+      last_fetched TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
@@ -24,6 +25,8 @@ export async function initializeDatabase(): Promise<void> {
       feed_id TEXT NOT NULL REFERENCES feeds(id) ON DELETE CASCADE,
       detected_language TEXT,
       needs_manual_language_review BOOLEAN DEFAULT FALSE,
+      summary TEXT,
+      original_language TEXT,
       title TEXT NOT NULL,
       description TEXT,
       content TEXT,
@@ -95,6 +98,42 @@ export async function initializeDatabase(): Promise<void> {
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_translation_jobs_created ON translation_jobs(created_at DESC);
   `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS polling_jobs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      is_active BOOLEAN DEFAULT TRUE,
+      interval_minutes INTEGER NOT NULL,
+      feed_filters TEXT NOT NULL,
+      last_run_time TEXT,
+      next_run_time TEXT,
+      total_runs INTEGER NOT NULL DEFAULT 0,
+      successful_runs INTEGER NOT NULL DEFAULT 0,
+      failed_runs INTEGER NOT NULL DEFAULT 0,
+      last_run_stats TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      CHECK (interval_minutes >= 1 AND interval_minutes <= 1440),
+      CHECK (total_runs >= 0),
+      CHECK (successful_runs >= 0),
+      CHECK (failed_runs >= 0)
+    )
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_polling_jobs_active ON polling_jobs(is_active);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_polling_jobs_next_run ON polling_jobs(next_run_time);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_polling_jobs_created ON polling_jobs(created_at DESC);
+  `);
+
 
   console.log("Database initialized successfully");
 }

@@ -24,6 +24,7 @@ Optimize for speed, but enforce these minimal guardrails:
 - Use **OpenAPI (default)**; auto-generate TS clients from `@mtrx/contracts`.
 - SQLite for MVP with WAL; plan Postgres migration via Prisma/Drizzle.
 - Provide `/healthz` and `/readyz`; implement graceful shutdown.
+- **Docker-first development** with multi-stage builds and container orchestration.
 
 **CORRECTNESS & RELIABILITY**
 - async/await; centralized error middleware returning `application/problem+json`.
@@ -42,7 +43,7 @@ Optimize for speed, but enforce these minimal guardrails:
 **🚫 NO AUTO-TESTING**
 - Do NOT run tests automatically (`pnpm test`, `npm test`, `yarn test`)
 - Do NOT include test execution in validation scripts or auto-commit blocks
-- Always end responses with: "🧪 Please run: `pnpm lint && pnpm typecheck && pnpm -r test`"
+- Always end responses with: "🧪 Please run: `docker-compose exec api npm run lint && docker-compose exec api npm run typecheck && docker-compose exec api npm test`"
 - Let the user decide when and how to run tests
 
 **✅ EXISTING FILE FIXES**
@@ -73,7 +74,7 @@ Optimize for speed, but enforce these minimal guardrails:
 // unified diff here
 ```
 
-🧪 Please run: `pnpm lint && pnpm typecheck && pnpm -r test`
+🧪 Please run: `docker-compose exec api npm run lint && docker-compose exec api npm run typecheck && docker-compose exec api npm test`
 
 **Commit:** `feat(api): add user avatar field with validation`
 ```
@@ -251,6 +252,27 @@ apps/
 - Don't work around issues instead of fixing them
 - Don't duplicate existing functionality
 
+## Docker Development
+
+**Container Commands:**
+- Use `docker-compose up -d` to start services
+- Execute commands inside containers: `docker-compose exec api <command>`
+- View logs: `docker-compose logs api` or `docker-compose logs frontend`
+- Rebuild containers: `docker-compose build --no-cache`
+- Clean up: `docker-compose down -v`
+
+**Development Workflow:**
+- All package management through containers: `docker-compose exec api npm install`
+- Database operations: `docker-compose exec api npm run db:migrate`
+- Live development with volume mounts for hot reload
+- Health checks via `/healthz` and `/readyz` endpoints
+
+**Container Services:**
+- `api`: Fastify backend service
+- `frontend`: Next.js frontend service  
+- `db`: SQLite/Postgres database service
+- `nginx`: Reverse proxy (production)
+
 ## Remember
 
 - Fix problems at their source
@@ -259,3 +281,4 @@ apps/
 - Provide clear diffs and commit messages
 - Always validate with Zod at boundaries
 - Keep security guardrails in place
+- **Use Docker commands for all development operations**

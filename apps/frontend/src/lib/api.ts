@@ -125,6 +125,63 @@ export const TranslationJobsResponse = z.object({
   })
 });
 
+export const PollingJob = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  is_active: z.boolean(),
+  interval_minutes: z.number(),
+  feed_filters: z.object({
+    feed_ids: z.array(z.string()).optional(),
+    categories: z.array(z.enum(["News", "Technology", "Finance", "Science", "Sports", "Entertainment", "Health", "Travel", "Education", "Business", "Politics", "Gaming", "Crypto", "Lifestyle"])).optional(),
+    languages: z.array(z.enum(["English", "Spanish", "Arabic", "Portuguese", "French", "Chinese", "Japanese"])).optional(),
+    regions: z.array(z.string()).optional(),
+    types: z.array(z.enum(["News", "Analysis", "Blog", "Tutorial", "Recipe", "Review", "Research"])).optional()
+  }),
+  last_run_time: z.string().nullable(),
+  next_run_time: z.string().nullable(),
+  total_runs: z.number(),
+  successful_runs: z.number(),
+  failed_runs: z.number(),
+  last_run_stats: z.object({
+    feeds_processed: z.number(),
+    articles_found: z.number(),
+    execution_time_ms: z.number()
+  }).nullable(),
+  created_at: z.string(),
+  updated_at: z.string()
+});
+
+export const PollingJobsResponse = z.object({
+  data: z.array(PollingJob),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    total_pages: z.number()
+  })
+});
+
+export const FeedFilterOptions = z.object({
+  categories: z.array(z.string()),
+  languages: z.array(z.string()),
+  regions: z.array(z.string()),
+  types: z.array(z.string()),
+  total_feeds: z.number()
+});
+
+export const FilteredFeedsResponse = z.object({
+  feeds: z.array(Feed),
+  total: z.number(),
+  applied_filters: z.object({
+    categories: z.array(z.string()).optional(),
+    languages: z.array(z.string()).optional(),
+    regions: z.array(z.string()).optional(),
+    types: z.array(z.string()).optional(),
+    feed_ids: z.array(z.string()).optional()
+  })
+});
+
 export type FeedType = z.infer<typeof Feed>;
 export type ArticleType = z.infer<typeof Article>;
 export type BackupType = z.infer<typeof Backup>;
@@ -136,11 +193,18 @@ export type ActiveFeedStatusType = z.infer<typeof ActiveFeedStatus>;
 export type ActiveFeedsStatusResponseType = z.infer<typeof ActiveFeedsStatusResponse>;
 export type TranslationJobType = z.infer<typeof TranslationJob>;
 export type TranslationJobsResponseType = z.infer<typeof TranslationJobsResponse>;
+export type PollingJobType = z.infer<typeof PollingJob>;
+export type PollingJobsResponseType = z.infer<typeof PollingJobsResponse>;
+export type FeedFilterOptionsType = z.infer<typeof FeedFilterOptions>;
+export type FilteredFeedsResponseType = z.infer<typeof FilteredFeedsResponse>;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
 
-// Ensure HTTPS in production
-if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !API_BASE_URL.startsWith('https://')) {
+// Ensure HTTPS in production (but allow localhost in development)
+if (typeof window === 'undefined' && 
+    process.env.NODE_ENV === 'production' && 
+    !API_BASE_URL.startsWith('https://') && 
+    !API_BASE_URL.startsWith('http://localhost')) {
   throw new Error('API_BASE_URL must use HTTPS in production');
 }
 
@@ -430,6 +494,118 @@ class ApiClient {
     return this.request('/translations/jobs/batch', {
       method: 'PATCH',
       body: JSON.stringify({ job_ids, ...updates }),
+    });
+  }
+
+  // Feed Filter Management endpoints
+  async getFeedFilterOptions(): Promise<FeedFilterOptionsType> {
+    return this.request<FeedFilterOptionsType>('/feeds/filter-options');
+  }
+
+  async getFilteredFeeds(filters: {
+    categories?: string[];
+    languages?: string[];
+    regions?: string[];
+    types?: string[];
+    feed_ids?: string[];
+  }): Promise<FilteredFeedsResponseType> {
+    return this.request<FilteredFeedsResponseType>('/feeds/filtered', {
+      method: 'POST',
+      body: JSON.stringify(filters),
+    });
+  }
+
+  // Polling Jobs Management endpoints
+  async getPollingJobs(page: number = 1, limit: number = 20): Promise<PollingJobType[]> {
+    try {
+      const response = await this.request<PollingJobsResponseType>('/polling/jobs', {
+        query: { page, limit }
+      });
+      return response?.data || [];
+    } catch (error) {
+      console.error('Failed to fetch polling jobs:', error);
+      return [];
+    }
+  }
+
+  async getPollingJob(id: string): Promise<PollingJobType> {
+    return this.request<PollingJobType>(`/polling/jobs/${id}`);
+  }
+
+  async createPollingJob(data: {
+    name: string;
+    description?: string;
+    interval_minutes: number;
+    feed_filters: {
+      feed_ids?: string[];
+      categories?: string[];
+      languages?: string[];
+      regions?: string[];
+      types?: string[];
+    };
+  }): Promise<PollingJobType> {
+    return this.request<PollingJobType>('/polling/jobs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePollingJob(id: string, data: {
+    name?: string;
+    description?: string;
+    is_active?: boolean;
+    interval_minutes?: number;
+    feed_filters?: {
+      feed_ids?: string[];
+      categories?: string[];
+      languages?: string[];
+      regions?: string[];
+      types?: string[];
+    };
+  }): Promise<PollingJobType> {
+    return this.request<PollingJobType>(`/polling/jobs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePollingJob(id: string): Promise<void> {
+    return this.request(`/polling/jobs/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async executePollingJob(id: string): Promise<{
+    success: boolean;
+    message: string;
+    job_id: string;
+    feeds_processed: number;
+    articles_found: number;
+    execution_time_ms: number;
+    timestamp: string;
+  }> {
+    return this.request(`/polling/jobs/${id}/execute`, {
+      method: 'POST',
+    });
+  }
+
+  async manualPollWithFilters(filters?: {
+    feed_ids?: string[];
+    categories?: string[];
+    languages?: string[];
+    regions?: string[];
+    types?: string[];
+  }): Promise<{
+    success: boolean;
+    message: string;
+    feeds_processed: number;
+    articles_found: number;
+    execution_time_ms: number;
+    timestamp: string;
+  }> {
+    return this.request('/polling/manual', {
+      method: 'POST',
+      body: JSON.stringify({ feed_filters: filters }),
     });
   }
 }

@@ -15,8 +15,12 @@ COPY packages/contracts/package*.json ./packages/contracts/
 # Install dependencies with frozen lockfile
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
-COPY . .
+# Copy source code (excluding node_modules which are already installed)
+COPY apps/api/src ./apps/api/src
+COPY apps/api/tsconfig*.json ./apps/api/
+COPY packages/contracts/src ./packages/contracts/src
+COPY packages/contracts/tsconfig*.json ./packages/contracts/
+COPY tsconfig*.json ./
 
 # Build the application
 RUN pnpm build --workspace=@mtrx/api
@@ -24,6 +28,9 @@ RUN pnpm build --workspace=@mtrx/contracts
 
 # Production stage
 FROM node:20-alpine AS runtime
+
+# Install TypeScript globally for development commands
+RUN npm install -g typescript
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -38,8 +45,14 @@ COPY --from=builder --chown=nodejs:nodejs /app/apps/api/package.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/package.json ./packages/contracts/
 
-# Install only production dependencies
-RUN npm install --omit=dev
+# Copy source files for development commands
+COPY --from=builder --chown=nodejs:nodejs /app/apps/api/src ./src
+COPY --from=builder --chown=nodejs:nodejs /app/apps/api/tsconfig*.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/src ./packages/contracts/src
+COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/tsconfig*.json ./packages/contracts/
+
+# Install all dependencies (including dev dependencies for lint/typecheck)
+RUN npm install
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data

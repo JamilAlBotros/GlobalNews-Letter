@@ -4,6 +4,14 @@
         "command": "node",
         "args": ["./mcp/build/server.js"],
         "cwd": "C:\\Users\\jamil\\Documents\\projects\\GlobalNewsLetter"
-      }
+      },
+      
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
     }
   }
+}

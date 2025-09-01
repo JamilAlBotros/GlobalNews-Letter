@@ -296,4 +296,78 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
       }
     };
   });
+
+  // Get feeds with filtering options for polling
+  app.get("/feeds/filter-options", async (request, reply) => {
+    const feeds = db.all<FeedRow>("SELECT * FROM feeds WHERE is_active = 1");
+    
+    const categories = [...new Set(feeds.map(feed => feed.category))].sort();
+    const languages = [...new Set(feeds.map(feed => feed.language))].sort();
+    const regions = [...new Set(feeds.map(feed => feed.region))].sort();
+    const types = [...new Set(feeds.map(feed => feed.type))].sort();
+    
+    return reply.send({
+      categories,
+      languages,
+      regions,
+      types,
+      total_feeds: feeds.length
+    });
+  });
+  
+  // Get filtered feeds for polling
+  app.post("/feeds/filtered", async (request, reply) => {
+    const filters = request.body as {
+      categories?: string[];
+      languages?: string[];
+      regions?: string[];
+      types?: string[];
+      feed_ids?: string[];
+    };
+    
+    let query = "SELECT * FROM feeds WHERE is_active = 1";
+    let params: any[] = [];
+    let conditions: string[] = [];
+    
+    // Apply filters
+    if (filters.feed_ids && filters.feed_ids.length > 0) {
+      conditions.push(`id IN (${filters.feed_ids.map(() => '?').join(',')})`);
+      params.push(...filters.feed_ids);
+    }
+    
+    if (filters.categories && filters.categories.length > 0) {
+      conditions.push(`category IN (${filters.categories.map(() => '?').join(',')})`);
+      params.push(...filters.categories);
+    }
+    
+    if (filters.languages && filters.languages.length > 0) {
+      conditions.push(`language IN (${filters.languages.map(() => '?').join(',')})`);
+      params.push(...filters.languages);
+    }
+    
+    if (filters.regions && filters.regions.length > 0) {
+      conditions.push(`region IN (${filters.regions.map(() => '?').join(',')})`);
+      params.push(...filters.regions);
+    }
+    
+    if (filters.types && filters.types.length > 0) {
+      conditions.push(`type IN (${filters.types.map(() => '?').join(',')})`);
+      params.push(...filters.types);
+    }
+    
+    if (conditions.length > 0) {
+      query += ` AND ${conditions.join(' AND ')}`;
+    }
+    
+    query += " ORDER BY name ASC";
+    
+    const feedRows = db.all<FeedRow>(query, ...params);
+    const feeds = feedRows.map(mapFeedRow);
+    
+    return reply.send({
+      feeds,
+      total: feeds.length,
+      applied_filters: filters
+    });
+  });
 }

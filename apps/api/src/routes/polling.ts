@@ -9,13 +9,26 @@ import {
   PollingStatusType,
   PollTriggerResponseType,
   ActiveFeedsStatusResponseType,
-  ActiveFeedStatusType
+  ActiveFeedStatusType,
+  PollingJob,
+  CreatePollingJobInput,
+  UpdatePollingJobInput,
+  PollingJobsResponse,
+  ManualPollInput,
+  PollingJobType,
+  CreatePollingJobInputType,
+  UpdatePollingJobInputType,
+  PollingJobsResponseType,
+  ManualPollInputType
 } from "../schemas/polling.js";
 import { getDatabase } from "../database/connection.js";
 import { LLMService } from "../services/llm.js";
 import { ErrorHandler } from "../utils/errors.js";
 import { articleRepository, feedRepository } from "../repositories/index.js";
+import { pollingJobRepository } from "../repositories/polling-job.js";
 import type { DatabaseArticle, DatabaseRSSFeed, Language, Category } from "../types/index.js";
+import { LanguageDetectionService } from '../services/language-detection.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Global polling state
 let pollingState = {
@@ -216,12 +229,257 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.send(response);
   });
+
+  // Process article with LLM (user-triggered)
+  app.post("/articles/:articleId/process", async (request, reply) => {
+    const { articleId } = request.params as { articleId: string };
+    const llmService = new LLMService();
+    
+    // Get article from database
+    const article = articleRepository.findById(articleId);
+    if (!article) {
+      throw Object.assign(new Error("Article not found"), {
+        status: 404,
+        detail: `Article with ID ${articleId} does not exist`
+      });
+    }
+
+    try {
+      // Get feed info for processing context
+      const feed = feedRepository.findById(article.feed_id);
+      
+      // Process with LLM
+      const processedResult = await processArticleWithLLM({
+        title: article.title,
+        url: article.url,
+        description: article.description || undefined,
+        content: article.content || undefined,
+        pubDate: article.published_at,
+        author: undefined,
+        guid: undefined
+      }, { 
+        id: article.feed_id, 
+        url: feed?.url || '', 
+        name: feed?.name || 'Unknown Feed' 
+      }, llmService);
+
+      // Update article with processed data
+      articleRepository.update(articleId, {
+        detected_language: processedResult.detectedLanguage,
+        needs_manual_language_review: processedResult.needsManualReview,
+        summary: processedResult.summary || null,
+        original_language: processedResult.originalLanguage
+      });
+
+      return reply.send({
+        success: true,
+        message: "Article processed successfully",
+        article_id: articleId,
+        detected_language: processedResult.detectedLanguage,
+        summary: processedResult.summary,
+        needs_manual_review: processedResult.needsManualReview
+      });
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        message: `Failed to process article: ${(error as Error).message}`,
+        article_id: articleId
+      });
+    }
+  });
+
+  // POLLING JOBS MANAGEMENT
+  
+  // Get all polling jobs
+  app.get("/polling/jobs", async (request, reply) => {
+    const { page = 1, limit = 20 } = request.query as { page?: number; limit?: number };
+    
+    const result = pollingJobRepository.findAll(Number(page), Number(limit));
+    
+    const jobs = result.data.map(job => ({
+      ...job,
+      feed_filters: JSON.parse(job.feed_filters),
+      last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
+    }));
+    
+    const response: PollingJobsResponseType = {
+      data: jobs,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: result.total,
+        total_pages: Math.ceil(result.total / Number(limit))
+      }
+    };
+    
+    return reply.send(response);
+  });
+
+  // Get single polling job
+  app.get("/polling/jobs/:jobId", async (request, reply) => {
+    const { jobId } = request.params as { jobId: string };
+    
+    const job = pollingJobRepository.findById(jobId);
+    if (!job) {
+      throw Object.assign(new Error("Polling job not found"), {
+        status: 404,
+        detail: `Polling job with ID ${jobId} does not exist`
+      });
+    }
+    
+    const response = {
+      ...job,
+      feed_filters: JSON.parse(job.feed_filters),
+      last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
+    };
+    
+    return reply.send(response);
+  });
+
+  // Create new polling job
+  app.post("/polling/jobs", async (request, reply) => {
+    const body = CreatePollingJobInput.parse(request.body);
+    
+    // Check if we have reached the limit of 10 jobs
+    const existingJobs = pollingJobRepository.findAll(1, 100);
+    if (existingJobs.total >= 10) {
+      throw Object.assign(new Error("Maximum polling jobs limit reached"), {
+        status: 400,
+        detail: "You can have a maximum of 10 polling jobs"
+      });
+    }
+    
+    const job = pollingJobRepository.create(body);
+    
+    const response = {
+      ...job,
+      feed_filters: JSON.parse(job.feed_filters),
+      last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
+    };
+    
+    return reply.code(201).send(response);
+  });
+
+  // Update polling job
+  app.put("/polling/jobs/:jobId", async (request, reply) => {
+    const { jobId } = request.params as { jobId: string };
+    const body = UpdatePollingJobInput.parse(request.body);
+    
+    const job = pollingJobRepository.update(jobId, body);
+    if (!job) {
+      throw Object.assign(new Error("Polling job not found"), {
+        status: 404,
+        detail: `Polling job with ID ${jobId} does not exist`
+      });
+    }
+    
+    const response = {
+      ...job,
+      feed_filters: JSON.parse(job.feed_filters),
+      last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
+    };
+    
+    return reply.send(response);
+  });
+
+  // Delete polling job
+  app.delete("/polling/jobs/:jobId", async (request, reply) => {
+    const { jobId } = request.params as { jobId: string };
+    
+    const deleted = pollingJobRepository.delete(jobId);
+    if (!deleted) {
+      throw Object.assign(new Error("Polling job not found"), {
+        status: 404,
+        detail: `Polling job with ID ${jobId} does not exist`
+      });
+    }
+    
+    return reply.code(204).send();
+  });
+
+  // Execute polling job manually
+  app.post("/polling/jobs/:jobId/execute", async (request, reply) => {
+    const { jobId } = request.params as { jobId: string };
+    
+    const job = pollingJobRepository.findById(jobId);
+    if (!job) {
+      throw Object.assign(new Error("Polling job not found"), {
+        status: 404,
+        detail: `Polling job with ID ${jobId} does not exist`
+      });
+    }
+    
+    try {
+      const filters = JSON.parse(job.feed_filters);
+      const startTime = performance.now();
+      const result = await executePollingJobWithFilters(filters);
+      const endTime = performance.now();
+      
+      // Update job stats
+      pollingJobRepository.updateRunStats(jobId, {
+        feeds_processed: result.feedsProcessed,
+        articles_found: result.articlesFound,
+        execution_time_ms: endTime - startTime
+      }, true);
+      
+      return reply.send({
+        success: true,
+        message: "Polling job executed successfully",
+        job_id: jobId,
+        feeds_processed: result.feedsProcessed,
+        articles_found: result.articlesFound,
+        execution_time_ms: endTime - startTime,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      // Update job stats for failure
+      pollingJobRepository.updateRunStats(jobId, {
+        feeds_processed: 0,
+        articles_found: 0,
+        execution_time_ms: 0
+      }, false);
+      
+      return reply.code(500).send({
+        success: false,
+        message: `Failed to execute polling job: ${(error as Error).message}`,
+        job_id: jobId,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Manual poll with filters
+  app.post("/polling/manual", async (request, reply) => {
+    const body = ManualPollInput.parse(request.body);
+    
+    try {
+      const startTime = performance.now();
+      const result = await executePollingJobWithFilters(body.feed_filters || {});
+      const endTime = performance.now();
+      
+      return reply.send({
+        success: true,
+        message: "Manual poll with filters completed successfully",
+        feeds_processed: result.feedsProcessed,
+        articles_found: result.articlesFound,
+        execution_time_ms: endTime - startTime,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        message: `Manual poll failed: ${(error as Error).message}`,
+        feeds_processed: 0,
+        articles_found: 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
 }
 
 // Helper function to execute a poll
 async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: number }> {
   const db = getDatabase();
-  const llmService = new LLMService();
   
   try {
     pollingState.lastPollTime = new Date().toISOString();
@@ -249,23 +507,20 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
           const existing = articleRepository.findByUrl(article.url);
           
           if (!existing) {
-            // Process article with enhanced LLM integration
-            const processedArticle = await processArticleWithLLM(article, feed, llmService);
-            
-            // Insert new article using repository
+            // Save article immediately without LLM processing
             const articleId = generateUUID();
             articleRepository.create({
               id: articleId,
               feed_id: feed.id,
-              title: processedArticle.title,
-              description: processedArticle.description || null,
-              content: processedArticle.content || null,
-              url: processedArticle.url,
-              detected_language: processedArticle.detectedLanguage,
-              needs_manual_language_review: processedArticle.needsManualReview,
-              summary: processedArticle.summary || null,
-              original_language: processedArticle.originalLanguage,
-              published_at: processedArticle.pubDate || new Date().toISOString(),
+              title: article.title,
+              description: article.description || null,
+              content: article.content || null,
+              url: article.url,
+              detected_language: null, // Will be set when user requests processing
+              needs_manual_language_review: false,
+              summary: null, // Will be generated when user requests processing
+              original_language: null, // Will be set when user requests processing
+              published_at: article.pubDate || new Date().toISOString(),
               scraped_at: new Date().toISOString(),
               created_at: new Date().toISOString()
             });
@@ -296,6 +551,97 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
     };
   } catch (error) {
     pollingState.failedPolls++;
+    throw error;
+  }
+}
+
+// Helper function to execute polling with filters
+async function executePollingJobWithFilters(filters: any): Promise<{ feedsProcessed: number; articlesFound: number }> {
+  try {
+    // Get feeds based on filters
+    let feeds = feedRepository.findActive();
+    
+    // Apply filters
+    if (filters.feed_ids && filters.feed_ids.length > 0) {
+      feeds = feeds.filter(feed => filters.feed_ids.includes(feed.id));
+    }
+    
+    if (filters.categories && filters.categories.length > 0) {
+      feeds = feeds.filter(feed => filters.categories.includes(feed.category));
+    }
+    
+    if (filters.languages && filters.languages.length > 0) {
+      feeds = feeds.filter(feed => filters.languages.includes(feed.language));
+    }
+    
+    if (filters.regions && filters.regions.length > 0) {
+      feeds = feeds.filter(feed => filters.regions.includes(feed.region));
+    }
+    
+    if (filters.types && filters.types.length > 0) {
+      feeds = feeds.filter(feed => filters.types.includes(feed.type));
+    }
+
+    let totalArticlesFound = 0;
+
+    // Process each filtered feed
+    for (const feed of feeds) {
+      try {
+        console.log(`Polling filtered feed: ${feed.name} (${feed.url})`);
+        
+        const feedArticles = await fetchAndParseRSSFeed(feed.url);
+        console.log(`Found ${feedArticles.length} articles in ${feed.name}`);
+        
+        let newArticles = 0;
+        
+        for (const article of feedArticles) {
+          if (!article.url || !article.title) continue;
+          
+          // Check if article already exists by URL
+          const existing = articleRepository.findByUrl(article.url);
+          
+          if (!existing) {
+            // Save article immediately without LLM processing
+            const articleId = generateUUID();
+            articleRepository.create({
+              id: articleId,
+              feed_id: feed.id,
+              title: article.title,
+              description: article.description || null,
+              content: article.content || null,
+              url: article.url,
+              detected_language: null, // Will be set when user requests processing
+              needs_manual_language_review: false,
+              summary: null, // Will be generated when user requests processing
+              original_language: null, // Will be set when user requests processing
+              published_at: article.pubDate || new Date().toISOString(),
+              scraped_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            });
+            
+            newArticles++;
+          }
+        }
+        
+        totalArticlesFound += newArticles;
+        
+        // Update feed timestamp to track polling activity
+        feedRepository.updateLastFetched(feed.id);
+        
+        if (newArticles > 0) {
+          console.log(`Added ${newArticles} new articles from ${feed.name}`);
+        }
+        
+      } catch (error) {
+        console.error(`Failed to poll feed ${feed.name}: ${error}`);
+      }
+    }
+    
+    return {
+      feedsProcessed: feeds.length,
+      articlesFound: totalArticlesFound
+    };
+  } catch (error) {
     throw error;
   }
 }
@@ -351,7 +697,6 @@ function detectArticleLanguage(article: {
   detectedLanguage: string | null;
   needsManualReview: boolean;
 } {
-  const { LanguageDetectionService } = require('../services/language-detection.js');
   const detector = new LanguageDetectionService();
   
   const result = detector.detectArticleLanguage(article);
@@ -465,6 +810,5 @@ async function processArticleWithLLM(
 
 // UUID generation function
 function generateUUID(): string {
-  const { v4: uuidv4 } = require('uuid');
   return uuidv4();
 }

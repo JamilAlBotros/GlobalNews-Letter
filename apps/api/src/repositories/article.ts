@@ -361,7 +361,7 @@ export class ArticleRepository extends BaseRepository {
 
     const recentCount = this.count(
       'recent_articles',
-      'SELECT COUNT(*) as count FROM articles WHERE created_at > datetime("now", "-7 days")'
+      'SELECT COUNT(*) as count FROM articles WHERE created_at > datetime(\'now\', \'-7 days\')'
     );
 
     return {

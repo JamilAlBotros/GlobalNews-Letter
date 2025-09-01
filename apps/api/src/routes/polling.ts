@@ -12,6 +12,9 @@ import {
   ActiveFeedStatusType
 } from "../schemas/polling.js";
 import { getDatabase } from "../database/connection.js";
+import { LLMService } from "../services/llm.js";
+import { ErrorHandler } from "../utils/errors.js";
+import type { DatabaseArticle, DatabaseRSSFeed, Language, Category } from "../types/index.js";
 
 // Global polling state
 let pollingState = {
@@ -26,6 +29,7 @@ let pollingState = {
 
 export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   const db = getDatabase();
+  const llmService = new LLMService();
 
   // Get current polling status
   app.get("/polling/status", async (request, reply) => {
@@ -252,13 +256,8 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
           );
           
           if (!existing && article.url && article.title) {
-            // Detect language for the article
-            const languageResult = detectArticleLanguage({
-              title: article.title,
-              description: article.description,
-              content: article.content,
-              url: article.url
-            });
+            // Process article with enhanced LLM integration
+            const processedArticle = await processArticleWithLLM(article, feed, llmService);
             
             // Insert new article
             const articleId = generateUUID();
@@ -266,18 +265,21 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
               INSERT INTO articles (
                 id, feed_id, title, description, content, url, 
                 detected_language, needs_manual_language_review,
+                summary, original_language,
                 published_at, scraped_at, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
               articleId,
               feed.id,
-              article.title,
-              article.description,
-              article.content,
-              article.url,
-              languageResult.detectedLanguage,
-              languageResult.needsManualReview,
-              article.pubDate || new Date().toISOString(),
+              processedArticle.title,
+              processedArticle.description,
+              processedArticle.content,
+              processedArticle.url,
+              processedArticle.detectedLanguage,
+              processedArticle.needsManualReview,
+              processedArticle.summary,
+              processedArticle.originalLanguage,
+              processedArticle.pubDate || new Date().toISOString(),
               new Date().toISOString(),
               new Date().toISOString()
             ]);
@@ -376,6 +378,107 @@ function detectArticleLanguage(article: {
     detectedLanguage: result.detectedLanguage,
     needsManualReview: result.needsManualReview
   };
+}
+
+// Enhanced article processing with LLM integration
+async function processArticleWithLLM(
+  article: {
+    title: string;
+    url: string;
+    description?: string;
+    content?: string;
+    pubDate?: string;
+    author?: string;
+    guid?: string;
+  },
+  feed: DatabaseRSSFeed,
+  llmService: LLMService
+): Promise<{
+  title: string;
+  url: string;
+  description?: string;
+  content?: string;
+  pubDate?: string;
+  author?: string;
+  guid?: string;
+  detectedLanguage: string | null;
+  needsManualReview: boolean;
+  summary?: string;
+  originalLanguage: string;
+}> {
+  try {
+    // Fallback language detection using existing service
+    const fallbackLanguageResult = detectArticleLanguage({
+      title: article.title,
+      description: article.description,
+      content: article.content,
+      url: article.url
+    });
+
+    // Enhanced language detection using LLM
+    let detectedLanguage = fallbackLanguageResult.detectedLanguage;
+    let needsManualReview = fallbackLanguageResult.needsManualReview;
+
+    try {
+      const llmLanguageResult = await llmService.detectLanguage(article.title + ' ' + (article.description || ''));
+      detectedLanguage = llmLanguageResult.language;
+      needsManualReview = llmLanguageResult.confidence < 0.8;
+    } catch (error) {
+      ErrorHandler.logError(error as Error, { 
+        operation: 'LLM language detection', 
+        articleUrl: article.url 
+      });
+      // Continue with fallback detection
+    }
+
+    // Generate summary using LLM
+    let summary: string | undefined;
+    try {
+      if (detectedLanguage) {
+        const { summary: generatedSummary } = await llmService.processArticle(
+          article.title,
+          article.description,
+          article.content,
+          detectedLanguage as any // Type assertion for supported languages
+        );
+        summary = generatedSummary;
+      }
+    } catch (error) {
+      ErrorHandler.logError(error as Error, { 
+        operation: 'LLM summary generation', 
+        articleUrl: article.url 
+      });
+      // Continue without summary
+    }
+
+    return {
+      ...article,
+      detectedLanguage,
+      needsManualReview,
+      summary,
+      originalLanguage: detectedLanguage || 'unknown'
+    };
+  } catch (error) {
+    ErrorHandler.logError(error as Error, { 
+      operation: 'processArticleWithLLM', 
+      articleUrl: article.url 
+    });
+    
+    // Return article with fallback processing
+    const fallbackResult = detectArticleLanguage({
+      title: article.title,
+      description: article.description,
+      content: article.content,
+      url: article.url
+    });
+    
+    return {
+      ...article,
+      detectedLanguage: fallbackResult.detectedLanguage,
+      needsManualReview: true, // Mark for manual review on errors
+      originalLanguage: fallbackResult.detectedLanguage || 'unknown'
+    };
+  }
 }
 
 // UUID generation function

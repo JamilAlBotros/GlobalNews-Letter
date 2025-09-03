@@ -31,10 +31,10 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find feed by ID
    */
-  findById(id: string): DatabaseRSSFeed | null {
-    return this.executeQuery<DatabaseRSSFeed>(
+  async findById(id: string): Promise<DatabaseRSSFeed | null> {
+    return await this.executeQuery<DatabaseRSSFeed>(
       'find_feed_by_id',
-      'SELECT * FROM feeds WHERE id = ?',
+      'SELECT * FROM feeds WHERE id = $1',
       [id]
     );
   }
@@ -42,10 +42,10 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find feed by URL
    */
-  findByUrl(url: string): DatabaseRSSFeed | null {
-    return this.executeQuery<DatabaseRSSFeed>(
+  async findByUrl(url: string): Promise<DatabaseRSSFeed | null> {
+    return await this.executeQuery<DatabaseRSSFeed>(
       'find_feed_by_url',
-      'SELECT * FROM feeds WHERE url = ?',
+      'SELECT * FROM feeds WHERE url = $1',
       [url]
     );
   }
@@ -53,8 +53,8 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find all feeds
    */
-  findAll(): DatabaseRSSFeed[] {
-    return this.executeQueryAll<DatabaseRSSFeed>(
+  async findAll(): Promise<DatabaseRSSFeed[]> {
+    return await this.executeQueryAll<DatabaseRSSFeed>(
       'find_all_feeds',
       'SELECT * FROM feeds ORDER BY name ASC'
     );
@@ -63,20 +63,20 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find active feeds only
    */
-  findActive(): DatabaseRSSFeed[] {
-    return this.executeQueryAll<DatabaseRSSFeed>(
+  async findActive(): Promise<DatabaseRSSFeed[]> {
+    return await this.executeQueryAll<DatabaseRSSFeed>(
       'find_active_feeds',
-      'SELECT *, updated_at as last_fetched FROM feeds WHERE is_active = 1 ORDER BY name ASC'
+      'SELECT *, updated_at as last_fetched FROM feeds WHERE is_active = true ORDER BY name ASC'
     );
   }
 
   /**
    * Find feeds by category
    */
-  findByCategory(category: string): DatabaseRSSFeed[] {
-    return this.executeQueryAll<DatabaseRSSFeed>(
+  async findByCategory(category: string): Promise<DatabaseRSSFeed[]> {
+    return await this.executeQueryAll<DatabaseRSSFeed>(
       'find_feeds_by_category',
-      'SELECT * FROM feeds WHERE category = ? ORDER BY name ASC',
+      'SELECT * FROM feeds WHERE category = $1 ORDER BY name ASC',
       [category]
     );
   }
@@ -84,10 +84,10 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find feeds by language
    */
-  findByLanguage(language: string): DatabaseRSSFeed[] {
-    return this.executeQueryAll<DatabaseRSSFeed>(
+  async findByLanguage(language: string): Promise<DatabaseRSSFeed[]> {
+    return await this.executeQueryAll<DatabaseRSSFeed>(
       'find_feeds_by_language',
-      'SELECT * FROM feeds WHERE language = ? ORDER BY name ASC',
+      'SELECT * FROM feeds WHERE language = $1 ORDER BY name ASC',
       [language]
     );
   }
@@ -95,14 +95,14 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find feeds that need updating (haven't been fetched recently)
    */
-  findNeedingUpdate(hoursThreshold: number = 1): DatabaseRSSFeed[] {
-    return this.executeQueryAll<DatabaseRSSFeed>(
+  async findNeedingUpdate(hoursThreshold: number = 1): Promise<DatabaseRSSFeed[]> {
+    return await this.executeQueryAll<DatabaseRSSFeed>(
       'find_feeds_needing_update',
       `SELECT * FROM feeds 
-       WHERE is_active = 1 
+       WHERE is_active = true 
        AND (
          last_fetched IS NULL 
-         OR last_fetched < datetime('now', '-' || ? || ' hours')
+         OR last_fetched < NOW() - INTERVAL '$1 hours'
        )
        ORDER BY last_fetched ASC NULLS FIRST`,
       [hoursThreshold]
@@ -112,15 +112,15 @@ export class FeedRepository extends BaseRepository {
   /**
    * Create new feed
    */
-  create(data: CreateFeedData): string {
+  async create(data: CreateFeedData): Promise<string> {
     const query = `
       INSERT INTO feeds (
         id, name, url, category, language, description, 
         is_active, last_fetched, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9)
     `;
 
-    this.executeCommand(
+    await this.executeCommand(
       'create_feed',
       query,
       [
@@ -142,7 +142,7 @@ export class FeedRepository extends BaseRepository {
   /**
    * Update existing feed
    */
-  update(id: string, data: UpdateFeedData): boolean {
+  async update(id: string, data: UpdateFeedData): Promise<boolean> {
     const updates: string[] = [];
     const params: any[] = [];
 
@@ -192,17 +192,17 @@ export class FeedRepository extends BaseRepository {
     params.push(id);
     const query = `UPDATE feeds SET ${updates.join(', ')} WHERE id = ?`;
 
-    const result = this.executeCommand('update_feed', query, params);
+    const result = await this.executeCommand('update_feed', query, params);
     return result.changes > 0;
   }
 
   /**
    * Update feed's last fetched timestamp
    */
-  updateLastFetched(id: string): boolean {
-    const result = this.executeCommand(
+  async updateLastFetched(id: string): Promise<boolean> {
+    const result = await this.executeCommand(
       'update_feed_last_fetched',
-      'UPDATE feeds SET updated_at = ? WHERE id = ?',
+      'UPDATE feeds SET updated_at = $1 WHERE id = $2',
       [new Date().toISOString(), id]
     );
     return result.changes > 0;
@@ -211,20 +211,20 @@ export class FeedRepository extends BaseRepository {
   /**
    * Toggle feed active status
    */
-  toggleActive(id: string): boolean {
-    const feed = this.findById(id);
+  async toggleActive(id: string): Promise<boolean> {
+    const feed = await this.findById(id);
     if (!feed) return false;
 
-    return this.update(id, { isActive: feed.is_active === 0 });
+    return await this.update(id, { isActive: feed.is_active === 0 });
   }
 
   /**
    * Delete feed
    */
-  delete(id: string): boolean {
-    const result = this.executeCommand(
+  async delete(id: string): Promise<boolean> {
+    const result = await this.executeCommand(
       'delete_feed',
-      'DELETE FROM feeds WHERE id = ?',
+      'DELETE FROM feeds WHERE id = $1',
       [id]
     );
     return result.changes > 0;
@@ -233,7 +233,7 @@ export class FeedRepository extends BaseRepository {
   /**
    * Check if feed exists by URL
    */
-  existsByUrl(url: string): boolean {
+  async existsByUrl(url: string): Promise<boolean> {
     return this.exists(
       'feed_exists_by_url',
       'SELECT 1 FROM feeds WHERE url = ?',
@@ -244,24 +244,24 @@ export class FeedRepository extends BaseRepository {
   /**
    * Get feed statistics
    */
-  getStatistics(): {
+  async getStatistics(): Promise<{
     total: number;
     active: number;
     inactive: number;
     byCategory: Record<string, number>;
     byLanguage: Record<string, number>;
     recentlyFetched: number;
-  } {
-    const total = this.count('total_feeds', 'SELECT COUNT(*) as count FROM feeds');
-    const active = this.count('active_feeds', 'SELECT COUNT(*) as count FROM feeds WHERE is_active = 1');
+  }> {
+    const total = await this.count('total_feeds', 'SELECT COUNT(*) as count FROM feeds');
+    const active = await this.count('active_feeds', 'SELECT COUNT(*) as count FROM feeds WHERE is_active = true');
     const inactive = total - active;
 
-    const categoryStats = this.executeQueryAll<{ category: string; count: number }>(
+    const categoryStats = await this.executeQueryAll<{ category: string; count: number }>(
       'feeds_by_category',
       'SELECT category, COUNT(*) as count FROM feeds GROUP BY category'
     );
 
-    const languageStats = this.executeQueryAll<{ language: string; count: number }>(
+    const languageStats = await this.executeQueryAll<{ language: string; count: number }>(
       'feeds_by_language',
       'SELECT language, COUNT(*) as count FROM feeds GROUP BY language'
     );
@@ -278,11 +278,11 @@ export class FeedRepository extends BaseRepository {
 
     // Calculate 24 hours ago in ISO format
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const recentlyFetched = this.executeQuery(
+    const recentlyFetched = await this.executeQuery(
       'recently_fetched_feeds',
-      'SELECT COUNT(*) as count FROM feeds WHERE last_fetched > ?',
+      'SELECT COUNT(*) as count FROM feeds WHERE last_fetched > $1',
       [twentyFourHoursAgo]
-    ) as { count: number };
+    ) as { count: number } | null;
 
     return {
       total,
@@ -290,15 +290,15 @@ export class FeedRepository extends BaseRepository {
       inactive,
       byCategory,
       byLanguage,
-      recentlyFetched: recentlyFetched.count
+      recentlyFetched: recentlyFetched?.count || 0
     };
   }
 
   /**
    * Get feeds with article counts
    */
-  findWithArticleCounts(): Array<DatabaseRSSFeed & { article_count: number }> {
-    return this.executeQueryAll<DatabaseRSSFeed & { article_count: number }>(
+  async findWithArticleCounts(): Promise<Array<DatabaseRSSFeed & { article_count: number }>> {
+    return await this.executeQueryAll<DatabaseRSSFeed & { article_count: number }>(
       'feeds_with_article_counts',
       `SELECT f.*, COUNT(a.id) as article_count
        FROM feeds f
@@ -311,12 +311,12 @@ export class FeedRepository extends BaseRepository {
   /**
    * Find feeds by multiple criteria
    */
-  findByCriteria(criteria: {
+  async findByCriteria(criteria: {
     category?: string;
     language?: string;
     isActive?: boolean;
     hasRecentArticles?: boolean;
-  }): DatabaseRSSFeed[] {
+  }): Promise<DatabaseRSSFeed[]> {
     let query = 'SELECT DISTINCT f.* FROM feeds f';
     const params: any[] = [];
     const conditions: string[] = [];
@@ -347,7 +347,7 @@ export class FeedRepository extends BaseRepository {
 
     query += ' ORDER BY f.name ASC';
 
-    return this.executeQueryAll<DatabaseRSSFeed>(
+    return await this.executeQueryAll<DatabaseRSSFeed>(
       'find_feeds_by_criteria',
       query,
       params
@@ -357,15 +357,14 @@ export class FeedRepository extends BaseRepository {
   /**
    * Batch update multiple feeds
    */
-  batchUpdate(updates: Array<{ id: string; data: UpdateFeedData }>): number {
-    return this.executeTransaction('batch_update_feeds', () => {
-      let totalChanges = 0;
-      for (const { id, data } of updates) {
-        if (this.update(id, data)) {
-          totalChanges++;
-        }
+  async batchUpdate(updates: Array<{ id: string; data: UpdateFeedData }>): Promise<number> {
+    let totalChanges = 0;
+    for (const { id, data } of updates) {
+      const updated = await this.update(id, data);
+      if (updated) {
+        totalChanges++;
       }
-      return totalChanges;
-    });
+    }
+    return totalChanges;
   }
 }

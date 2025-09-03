@@ -67,30 +67,31 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     
     let whereClause = "1 = 1";
     const params: any[] = [];
+    let paramIndex = 1;
     
     if (status) {
-      whereClause += " AND status = ?";
+      whereClause += ` AND status = $${paramIndex++}`;
       params.push(status);
     }
     
     if (priority) {
-      whereClause += " AND priority = ?";
+      whereClause += ` AND priority = $${paramIndex++}`;
       params.push(priority);
     }
     
     if (article_id) {
-      whereClause += " AND article_id = ?";
+      whereClause += ` AND article_id = $${paramIndex++}`;
       params.push(article_id);
     }
     
-    const jobs = db.all<TranslationJobRow>(
-      `SELECT * FROM translation_jobs WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    const jobs = await db.all<TranslationJobRow>(
+      `SELECT * FROM translation_jobs WHERE ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
       ...params,
       query.limit,
       offset
     );
     
-    const totalResult = db.get<{ count: number }>(
+    const totalResult = await db.get<{ count: number }>(
       `SELECT COUNT(*) as count FROM translation_jobs WHERE ${whereClause}`,
       ...params
     );
@@ -113,7 +114,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
   app.get("/translations/jobs/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const job = db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = ?", id);
+    const job = await db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = $1", id);
     if (!job) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -131,8 +132,8 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     const input = CreateTranslationJobInput.parse(request.body);
     
     // Check if article exists
-    const article = db.get<{ id: string; title: string }>(
-      "SELECT id, title FROM articles WHERE id = ?",
+    const article = await db.get<{ id: string; title: string }>(
+      "SELECT id, title FROM articles WHERE id = $1",
       input.article_id
     );
 
@@ -160,21 +161,21 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     // Mock cost estimation ($0.05 per word)
     const costEstimate = estimatedWordCount * 0.05;
 
-    db.run(`
+    await db.run(`
       INSERT INTO translation_jobs (
         id, article_id, article_title, source_language, target_languages,
         status, priority, progress_percentage, assigned_worker, retry_count,
         max_retries, estimated_completion, started_at, completed_at,
         created_at, updated_at, error_message, word_count, cost_estimate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    `, 
       id, input.article_id, article.title, 'en', targetLanguagesStr,
       'queued', input.priority, 0, null, 0,
       3, estimatedCompletion, null, null,
       now, now, null, estimatedWordCount, costEstimate
-    ]);
+    );
 
-    const newJob = db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = ?", id);
+    const newJob = await db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = $1", id);
     if (!newJob) {
       throw new Error("Failed to create translation job");
     }
@@ -188,7 +189,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const input = UpdateTranslationJobInput.parse(request.body);
 
-    const existingJob = db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = ?", id);
+    const existingJob = await db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = $1", id);
     if (!existingJob) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -200,38 +201,39 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
 
     const updates: string[] = [];
     const values: any[] = [];
+    let paramIndex = 1;
 
     if (input.status !== undefined) {
-      updates.push("status = ?");
+      updates.push(`status = $${paramIndex++}`);
       values.push(input.status);
       
       // Update timestamps based on status
       if (input.status === 'processing' && !existingJob.started_at) {
-        updates.push("started_at = ?");
+        updates.push(`started_at = $${paramIndex++}`);
         values.push(new Date().toISOString());
       } else if (input.status === 'completed' && !existingJob.completed_at) {
-        updates.push("completed_at = ?", "progress_percentage = ?");
+        updates.push(`completed_at = $${paramIndex++}`, `progress_percentage = $${paramIndex++}`);
         values.push(new Date().toISOString(), 100);
       }
     }
 
     if (input.priority !== undefined) {
-      updates.push("priority = ?");
+      updates.push(`priority = $${paramIndex++}`);
       values.push(input.priority);
     }
 
     if (input.progress_percentage !== undefined) {
-      updates.push("progress_percentage = ?");
+      updates.push(`progress_percentage = $${paramIndex++}`);
       values.push(input.progress_percentage);
     }
 
     if (input.assigned_worker !== undefined) {
-      updates.push("assigned_worker = ?");
+      updates.push(`assigned_worker = $${paramIndex++}`);
       values.push(input.assigned_worker);
     }
 
     if (input.error_message !== undefined) {
-      updates.push("error_message = ?");
+      updates.push(`error_message = $${paramIndex++}`);
       values.push(input.error_message);
     }
 
@@ -239,16 +241,16 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
       return mapTranslationJobRow(existingJob);
     }
 
-    updates.push("updated_at = ?");
+    updates.push(`updated_at = $${paramIndex++}`);
     values.push(new Date().toISOString());
     values.push(id);
 
-    db.run(
-      `UPDATE translation_jobs SET ${updates.join(", ")} WHERE id = ?`,
+    await db.run(
+      `UPDATE translation_jobs SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
       ...values
     );
 
-    const updatedJob = db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = ?", id);
+    const updatedJob = await db.get<TranslationJobRow>("SELECT * FROM translation_jobs WHERE id = $1", id);
     if (!updatedJob) {
       throw new Error("Failed to update translation job");
     }
@@ -260,7 +262,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/translations/jobs/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const existingJob = db.get<TranslationJobRow>("SELECT id FROM translation_jobs WHERE id = ?", id);
+    const existingJob = await db.get<TranslationJobRow>("SELECT id FROM translation_jobs WHERE id = $1", id);
     if (!existingJob) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -270,7 +272,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    db.run("DELETE FROM translation_jobs WHERE id = ?", id);
+    await db.run("DELETE FROM translation_jobs WHERE id = $1", id);
     reply.code(204);
   });
 
@@ -287,22 +289,23 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
 
     const updates: string[] = [];
     const values: any[] = [];
+    let paramIndex = 1;
 
     if (status) {
-      updates.push("status = ?");
+      updates.push(`status = $${paramIndex++}`);
       values.push(status);
       
       if (status === 'processing') {
-        updates.push("started_at = COALESCE(started_at, ?)");
+        updates.push(`started_at = COALESCE(started_at, $${paramIndex++})`);
         values.push(new Date().toISOString());
       } else if (status === 'completed') {
-        updates.push("completed_at = COALESCE(completed_at, ?)", "progress_percentage = 100");
+        updates.push(`completed_at = COALESCE(completed_at, $${paramIndex++})`, "progress_percentage = 100");
         values.push(new Date().toISOString());
       }
     }
 
     if (assigned_worker !== undefined) {
-      updates.push("assigned_worker = ?");
+      updates.push(`assigned_worker = $${paramIndex++}`);
       values.push(assigned_worker);
     }
 
@@ -313,12 +316,12 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    updates.push("updated_at = ?");
+    updates.push(`updated_at = $${paramIndex++}`);
     values.push(new Date().toISOString());
 
-    const placeholders = job_ids.map(() => '?').join(',');
+    const placeholders = job_ids.map(() => `$${paramIndex++}`).join(',');
     
-    const result = db.run(
+    const result = await db.run(
       `UPDATE translation_jobs SET ${updates.join(", ")} WHERE id IN (${placeholders})`,
       ...values,
       ...job_ids

@@ -13,7 +13,7 @@ interface FeedRow {
   region: string;
   category: string;
   type: string;
-  is_active: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -27,7 +27,7 @@ function mapFeedRow(row: FeedRow): Feed {
     region: row.region,
     category: row.category as any,
     type: row.type as any,
-    is_active: Boolean(row.is_active),
+    is_active: row.is_active,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -40,12 +40,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const query = PaginationQuery.parse(request.query);
     const offset = (query.page - 1) * query.limit;
 
-    const feeds = db.all<FeedRow>(
-      "SELECT * FROM feeds ORDER BY created_at DESC LIMIT ? OFFSET ?",
+    const feeds = await db.all<FeedRow>(
+      "SELECT * FROM feeds ORDER BY created_at DESC LIMIT $1 OFFSET $2",
       query.limit,
       offset
     );
-    const totalResult = db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds");
+    const totalResult = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds");
 
     const total = totalResult?.count || 0;
     const totalPages = Math.ceil(total / query.limit);
@@ -81,8 +81,8 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Step 2: Check for existing feed
-    const existingFeed = db.get<FeedRow>(
-      "SELECT id FROM feeds WHERE url = ?",
+    const existingFeed = await db.get<FeedRow>(
+      "SELECT id FROM feeds WHERE url = $1",
       input.url
     );
 
@@ -99,12 +99,12 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    db.run(`
+    await db.run(`
       INSERT INTO feeds (id, name, url, language, region, category, type, is_active, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, input.name, input.url, input.language, input.region, input.category, input.type, input.is_active ? 1 : 0, now, now]);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, id, input.name, input.url, input.language, input.region, input.category, input.type, input.is_active ? true : false, now, now);
 
-    const newFeed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const newFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = $1", id);
     if (!newFeed) {
       throw new Error("Failed to create feed");
     }
@@ -157,7 +157,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.get("/feeds/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const feed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const feed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = $1", id);
     if (!feed) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -174,7 +174,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const input = UpdateFeedInput.parse(request.body);
 
-    const existingFeed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const existingFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = $1", id);
     if (!existingFeed) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -185,8 +185,8 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (input.url && input.url !== existingFeed.url) {
-      const duplicateFeed = db.get<FeedRow>(
-        "SELECT id FROM feeds WHERE url = ? AND id != ?",
+      const duplicateFeed = await db.get<FeedRow>(
+        "SELECT id FROM feeds WHERE url = $1 AND id != $2",
         input.url,
         id
       );
@@ -199,49 +199,50 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     const updates: string[] = [];
     const values: any[] = [];
 
+    let paramIndex = 1;
     if (input.name !== undefined) {
-      updates.push("name = ?");
+      updates.push(`name = $${paramIndex++}`);
       values.push(input.name);
     }
     if (input.url !== undefined) {
-      updates.push("url = ?");
+      updates.push(`url = $${paramIndex++}`);
       values.push(input.url);
     }
     if (input.language !== undefined) {
-      updates.push("language = ?");
+      updates.push(`language = $${paramIndex++}`);
       values.push(input.language);
     }
     if (input.region !== undefined) {
-      updates.push("region = ?");
+      updates.push(`region = $${paramIndex++}`);
       values.push(input.region);
     }
     if (input.category !== undefined) {
-      updates.push("category = ?");
+      updates.push(`category = $${paramIndex++}`);
       values.push(input.category);
     }
     if (input.type !== undefined) {
-      updates.push("type = ?");
+      updates.push(`type = $${paramIndex++}`);
       values.push(input.type);
     }
     if (input.is_active !== undefined) {
-      updates.push("is_active = ?");
-      values.push(input.is_active ? 1 : 0);
+      updates.push(`is_active = $${paramIndex++}`);
+      values.push(input.is_active ? true : false);
     }
 
     if (updates.length === 0) {
       return mapFeedRow(existingFeed);
     }
 
-    updates.push("updated_at = ?");
+    updates.push(`updated_at = $${paramIndex++}`);
     values.push(new Date().toISOString());
     values.push(id);
 
-    db.run(
-      `UPDATE feeds SET ${updates.join(", ")} WHERE id = ?`,
+    await db.run(
+      `UPDATE feeds SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
       ...values
     );
 
-    const updatedFeed = db.get<FeedRow>("SELECT * FROM feeds WHERE id = ?", id);
+    const updatedFeed = await db.get<FeedRow>("SELECT * FROM feeds WHERE id = $1", id);
     if (!updatedFeed) {
       throw new Error("Failed to update feed");
     }
@@ -252,7 +253,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/feeds/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const existingFeed = db.get<FeedRow>("SELECT id FROM feeds WHERE id = ?", id);
+    const existingFeed = await db.get<FeedRow>("SELECT id FROM feeds WHERE id = $1", id);
     if (!existingFeed) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -262,7 +263,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    db.run("DELETE FROM feeds WHERE id = ?", id);
+    await db.run("DELETE FROM feeds WHERE id = $1", id);
     reply.code(204);
   });
 
@@ -273,15 +274,15 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
 
     // For now, return feed processing instances (could be from feed_runs or similar table)
     // This is a placeholder implementation - adjust based on your feed processing architecture
-    const instances = db.all<any>(
+    const instances = await db.all<any>(
       `SELECT f.id, f.name, f.url, f.is_active, f.updated_at as last_run,
        'running' as status, 0 as articles_fetched, NULL as error_message
-       FROM feeds f WHERE f.is_active = 1 
-       ORDER BY f.updated_at DESC LIMIT ? OFFSET ?`,
+       FROM feeds f WHERE f.is_active = true 
+       ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
       query.limit,
       offset
     );
-    const totalResult = db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds WHERE is_active = 1");
+    const totalResult = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM feeds WHERE is_active = true");
 
     const total = totalResult?.count || 0;
     const totalPages = Math.ceil(total / query.limit);
@@ -299,7 +300,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
 
   // Get feeds with filtering options for polling
   app.get("/feeds/filter-options", async (request, reply) => {
-    const feeds = db.all<FeedRow>("SELECT * FROM feeds WHERE is_active = 1");
+    const feeds = await db.all<FeedRow>("SELECT * FROM feeds WHERE is_active = true");
     
     const categories = [...new Set(feeds.map(feed => feed.category))].sort();
     const languages = [...new Set(feeds.map(feed => feed.language))].sort();
@@ -325,33 +326,39 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
       feed_ids?: string[];
     };
     
-    let query = "SELECT * FROM feeds WHERE is_active = 1";
+    let query = "SELECT * FROM feeds WHERE is_active = true";
     let params: any[] = [];
     let conditions: string[] = [];
+    let paramIndex = 1;
     
     // Apply filters
     if (filters.feed_ids && filters.feed_ids.length > 0) {
-      conditions.push(`id IN (${filters.feed_ids.map(() => '?').join(',')})`);
+      const placeholders = filters.feed_ids.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`id IN (${placeholders})`);
       params.push(...filters.feed_ids);
     }
     
     if (filters.categories && filters.categories.length > 0) {
-      conditions.push(`category IN (${filters.categories.map(() => '?').join(',')})`);
+      const placeholders = filters.categories.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`category IN (${placeholders})`);
       params.push(...filters.categories);
     }
     
     if (filters.languages && filters.languages.length > 0) {
-      conditions.push(`language IN (${filters.languages.map(() => '?').join(',')})`);
+      const placeholders = filters.languages.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`language IN (${placeholders})`);
       params.push(...filters.languages);
     }
     
     if (filters.regions && filters.regions.length > 0) {
-      conditions.push(`region IN (${filters.regions.map(() => '?').join(',')})`);
+      const placeholders = filters.regions.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`region IN (${placeholders})`);
       params.push(...filters.regions);
     }
     
     if (filters.types && filters.types.length > 0) {
-      conditions.push(`type IN (${filters.types.map(() => '?').join(',')})`);
+      const placeholders = filters.types.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`type IN (${placeholders})`);
       params.push(...filters.types);
     }
     
@@ -361,7 +368,7 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     
     query += " ORDER BY name ASC";
     
-    const feedRows = db.all<FeedRow>(query, ...params);
+    const feedRows = await db.all<FeedRow>(query, ...params);
     const feeds = feedRows.map(mapFeedRow);
     
     return reply.send({

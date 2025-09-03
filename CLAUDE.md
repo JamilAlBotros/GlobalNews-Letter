@@ -22,7 +22,7 @@ Optimize for speed, but enforce these minimal guardrails:
 **ARCHITECTURE**
 - Start as a modular monolith. Split modules only when scaling or velocity requires it.
 - Use **OpenAPI (default)**; auto-generate TS clients from `@mtrx/contracts`.
-- SQLite for MVP with WAL; plan Postgres migration via Prisma/Drizzle.
+- Postgres database with Prisma/Drizzle ORM.
 - Provide `/healthz` and `/readyz`; implement graceful shutdown.
 - **Docker-first development** with multi-stage builds and container orchestration.
 
@@ -270,7 +270,7 @@ apps/
 **Container Services:**
 - `api`: Fastify backend service
 - `frontend`: Next.js frontend service  
-- `db`: SQLite/Postgres database service
+- `db`: Postgres database service
 - `nginx`: Reverse proxy (production)
 
 ## Remember

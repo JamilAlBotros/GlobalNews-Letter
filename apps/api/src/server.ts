@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { v4 as uuidv4 } from "uuid";
 import { initializeDatabase } from "./database/init.js";
-import { getDatabase } from "./database/connection.js";
+import { getDatabase, healthCheck } from "./database/connection.js";
 import { feedRoutes } from "./routes/feeds.js";
 import { articleRoutes } from "./routes/articles.js";
 import { backupRoutes } from "./routes/backup.js";
@@ -81,8 +81,7 @@ app.get("/healthz", async () => {
 });
 
 app.get("/readyz", async (request, reply) => {
-  const db = getDatabase();
-  const isReady = db.healthCheck();
+  const isReady = await healthCheck();
   
   if (!isReady) {
     reply.code(503);

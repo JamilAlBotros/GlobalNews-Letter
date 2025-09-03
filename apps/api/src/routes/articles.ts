@@ -113,12 +113,12 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
 
     await db.run(`
       INSERT INTO articles (id, feed_id, detected_language, needs_manual_language_review, title, description, content, url, published_at, scraped_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, 
       id,
       input.feed_id,
       input.detected_language,
-      input.needs_manual_language_review ? 1 : 0,
+      input.needs_manual_language_review ? true : false,
       input.title,
       input.description,
       input.content,
@@ -126,9 +126,9 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
       input.published_at,
       now,
       now
-    ]);
+    );
 
-    const newArticle = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = ?", id);
+    const newArticle = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = $1", id);
     if (!newArticle) {
       throw new Error("Failed to create article");
     }
@@ -140,7 +140,7 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
   app.get("/articles/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const article = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = ?", id);
+    const article = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = $1", id);
     if (!article) {
       return reply.code(404).type("application/problem+json").send({
         type: "about:blank",
@@ -157,7 +157,7 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const input = UpdateArticleInput.parse(request.body);
 
-    const existingArticle = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = ?", id);
+    const existingArticle = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = $1", id);
     if (!existingArticle) {
       reply.code(404);
       throw new Error("Article not found");
@@ -165,7 +165,7 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
 
     if (input.url && input.url !== existingArticle.url) {
       const duplicateArticle = await db.get<ArticleRow>(
-        "SELECT id FROM articles WHERE url = ? AND id != ?",
+        "SELECT id FROM articles WHERE url = $1 AND id != $2",
         input.url,
         id
       );
@@ -177,33 +177,34 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
 
     const updates: string[] = [];
     const values: any[] = [];
+    let paramIndex = 1;
 
     if (input.title !== undefined) {
-      updates.push("title = ?");
+      updates.push(`title = $${paramIndex++}`);
       values.push(input.title);
     }
     if (input.description !== undefined) {
-      updates.push("description = ?");
+      updates.push(`description = $${paramIndex++}`);
       values.push(input.description);
     }
     if (input.detected_language !== undefined) {
-      updates.push("detected_language = ?");
+      updates.push(`detected_language = $${paramIndex++}`);
       values.push(input.detected_language);
     }
     if (input.needs_manual_language_review !== undefined) {
-      updates.push("needs_manual_language_review = ?");
-      values.push(input.needs_manual_language_review ? 1 : 0);
+      updates.push(`needs_manual_language_review = $${paramIndex++}`);
+      values.push(input.needs_manual_language_review ? true : false);
     }
     if (input.content !== undefined) {
-      updates.push("content = ?");
+      updates.push(`content = $${paramIndex++}`);
       values.push(input.content);
     }
     if (input.url !== undefined) {
-      updates.push("url = ?");
+      updates.push(`url = $${paramIndex++}`);
       values.push(input.url);
     }
     if (input.published_at !== undefined) {
-      updates.push("published_at = ?");
+      updates.push(`published_at = $${paramIndex++}`);
       values.push(input.published_at);
     }
 
@@ -214,11 +215,11 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
     values.push(id);
 
     await db.run(
-      `UPDATE articles SET ${updates.join(", ")} WHERE id = ?`,
+      `UPDATE articles SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
       ...values
     );
 
-    const updatedArticle = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = ?", id);
+    const updatedArticle = await db.get<ArticleRow>("SELECT * FROM articles WHERE id = $1", id);
     if (!updatedArticle) {
       throw new Error("Failed to update article");
     }
@@ -229,13 +230,13 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/articles/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     
-    const existingArticle = await db.get<ArticleRow>("SELECT id FROM articles WHERE id = ?", id);
+    const existingArticle = await db.get<ArticleRow>("SELECT id FROM articles WHERE id = $1", id);
     if (!existingArticle) {
       reply.code(404);
       throw new Error("Article not found");
     }
 
-    await db.run("DELETE FROM articles WHERE id = ?", id);
+    await db.run("DELETE FROM articles WHERE id = $1", id);
     reply.code(204);
   });
 }

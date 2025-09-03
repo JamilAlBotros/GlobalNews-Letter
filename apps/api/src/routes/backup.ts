@@ -71,7 +71,7 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
         VACUUM INTO '${filepath.replace(/'/g, "''").replace('.gz', '')}'
       `;
       
-      db.exec(backupSql);
+      await db.exec(backupSql);
       
       let finalSize = 0;
       
@@ -158,11 +158,11 @@ export async function backupRoutes(app: FastifyInstance): Promise<void> {
       
       // Clear all tables (order matters for foreign keys)
       for (const table of tables) {
-        db.exec(`DELETE FROM ${table}`);
+        await db.exec(`DELETE FROM ${table}`);
       }
       
       // Vacuum to reclaim space
-      db.exec('VACUUM');
+      await db.exec('VACUUM');
       
       const response: DatabaseWipeResponse = {
         success: true,

@@ -1,5 +1,21 @@
 
 services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: globalnews
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+      POSTGRES_DB: globalnews
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U globalnews -d globalnews"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -9,9 +25,14 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3333
-      - DATABASE_URL=./data/newsletter.db
-    volumes:
-      - ./data:/app/data
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=globalnews
+      - DB_PASSWORD=dev_password_change_in_prod
+      - DB_NAME=globalnews
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3333/healthz', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
       interval: 30s
@@ -30,6 +51,9 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:3333
     depends_on:
       - api
+
+volumes:
+  postgres_data:
 
 networks:
   default:

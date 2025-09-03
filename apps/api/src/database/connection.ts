@@ -1,87 +1,118 @@
-import Database from "better-sqlite3";
+import { Pool, PoolClient } from 'pg';
 
 export interface DatabaseConnection {
-  get<T = any>(sql: string, ...params: any[]): T | undefined;
-  all<T = any>(sql: string, ...params: any[]): T[];
-  run(sql: string, ...params: any[]): Database.RunResult;
-  exec(sql: string): void;
-  close(): void;
-  healthCheck(): boolean;
+  get<T = any>(sql: string, ...params: any[]): Promise<T | undefined>;
+  all<T = any>(sql: string, ...params: any[]): Promise<T[]>;
+  run(sql: string, ...params: any[]): Promise<{ changes: number; lastInsertRowid?: number }>;
+  exec(sql: string): Promise<void>;
+  close(): Promise<void>;
+  healthCheck(): Promise<boolean>;
 }
 
-export class SQLiteConnection implements DatabaseConnection {
-  private db: Database.Database;
+export interface DatabaseConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+}
 
-  constructor(dbPath: string = "data/news.db") {
-    this.db = new Database(dbPath);
-    this.configureSQLite();
+function getConnectionConfig(): DatabaseConfig {
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    user: process.env.DB_USER || 'globalnews',
+    password: process.env.DB_PASSWORD || 'dev_password_change_in_prod',
+    database: process.env.DB_NAME || 'globalnews',
+  };
+}
+
+export class PostgreSQLConnection implements DatabaseConnection {
+  private pool: Pool;
+
+  constructor() {
+    const config = getConnectionConfig();
+    this.pool = new Pool({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password,
+      database: config.database,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
   }
 
-  private configureSQLite(): void {
-    this.db.exec("PRAGMA journal_mode=WAL;");
-    this.db.exec("PRAGMA foreign_keys=ON;");
-    this.db.exec("PRAGMA synchronous=NORMAL;");
-    this.db.exec("PRAGMA cache_size=1000;");
-    this.db.exec("PRAGMA temp_store=memory;");
-  }
-
-  get<T = any>(sql: string, ...params: any[]): T | undefined {
+  async get<T = any>(sql: string, ...params: any[]): Promise<T | undefined> {
     try {
-      const stmt = this.db.prepare(sql);
-      return stmt.get(...params) as T | undefined;
+      const result = await this.pool.query(sql, params);
+      return result.rows[0] as T | undefined;
     } catch (error) {
       console.error(`Database GET error: ${sql}`, error);
       throw error;
     }
   }
 
-  all<T = any>(sql: string, ...params: any[]): T[] {
+  async all<T = any>(sql: string, ...params: any[]): Promise<T[]> {
     try {
-      const stmt = this.db.prepare(sql);
-      return stmt.all(...params) as T[];
+      const result = await this.pool.query(sql, params);
+      return result.rows as T[];
     } catch (error) {
       console.error(`Database ALL error: ${sql}`, error);
       throw error;
     }
   }
 
-  run(sql: string, ...params: any[]): Database.RunResult {
+  async run(sql: string, ...params: any[]): Promise<{ changes: number; lastInsertRowid?: number }> {
     try {
-      const stmt = this.db.prepare(sql);
-      return stmt.run(...params);
+      const result = await this.pool.query(sql, params);
+      return {
+        changes: result.rowCount || 0,
+        lastInsertRowid: undefined // PostgreSQL doesn't have rowid concept
+      };
     } catch (error) {
       console.error(`Database RUN error: ${sql}`, error);
       throw error;
     }
   }
 
-  exec(sql: string): void {
+  async exec(sql: string): Promise<void> {
     try {
-      this.db.exec(sql);
+      await this.pool.query(sql);
     } catch (error) {
       console.error(`Database EXEC error: ${sql}`, error);
       throw error;
     }
   }
 
-  close(): void {
+  async close(): Promise<void> {
     try {
-      this.db.close();
+      await this.pool.end();
     } catch (error) {
       console.error("Database close error:", error);
       throw error;
     }
   }
 
-  transaction<T>(operation: (conn: DatabaseConnection) => T): T {
-    return this.db.transaction(() => {
-      return operation(this);
-    })();
+  async transaction<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await operation(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
-  healthCheck(): boolean {
+  async healthCheck(): Promise<boolean> {
     try {
-      this.get("SELECT 1 as test");
+      await this.get("SELECT 1 as test");
       return true;
     } catch {
       return false;
@@ -89,28 +120,29 @@ export class SQLiteConnection implements DatabaseConnection {
   }
 }
 
-let globalConnection: SQLiteConnection | null = null;
+let globalConnection: PostgreSQLConnection | null = null;
 
-export function getDatabase(dbPath?: string): SQLiteConnection {
+export function getDatabase(): PostgreSQLConnection {
   if (!globalConnection) {
-    const path = dbPath || (process.env.NODE_ENV === 'test' 
-      ? `data/test-${process.pid}-${Math.random().toString(36).substr(2, 9)}.db` 
-      : 'data/news.db');
-    globalConnection = new SQLiteConnection(path);
+    globalConnection = new PostgreSQLConnection();
   }
   return globalConnection;
 }
 
-export function closeDatabase(): void {
+export async function closeDatabase(): Promise<void> {
   if (globalConnection) {
-    globalConnection.close();
+    await globalConnection.close();
     globalConnection = null;
   }
 }
 
 export function resetDatabase(): void {
   closeDatabase();
-  // Force a new connection to be created on next getDatabase() call
+}
+
+export async function healthCheck(): Promise<boolean> {
+  const db = getDatabase();
+  return await db.healthCheck();
 }
 
 process.on("SIGINT", () => closeDatabase());

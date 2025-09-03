@@ -13,13 +13,13 @@ export abstract class BaseRepository {
   /**
    * Execute query with error handling and logging
    */
-  protected executeQuery<T>(
+  protected async executeQuery<T>(
     operation: string,
     query: string,
     params: any[] = []
-  ): T | null {
+  ): Promise<T | null> {
     try {
-      const result = this.db.get<T>(query, ...params);
+      const result = await this.db.get<T>(query, ...params);
       return result || null;
     } catch (error) {
       ErrorHandler.logError(error as Error, {
@@ -34,13 +34,13 @@ export abstract class BaseRepository {
   /**
    * Execute query returning all results
    */
-  protected executeQueryAll<T>(
+  protected async executeQueryAll<T>(
     operation: string,
     query: string,
     params: any[] = []
-  ): T[] {
+  ): Promise<T[]> {
     try {
-      const results = this.db.all<T>(query, ...params);
+      const results = await this.db.all<T>(query, ...params);
       return results || [];
     } catch (error) {
       ErrorHandler.logError(error as Error, {
@@ -55,16 +55,16 @@ export abstract class BaseRepository {
   /**
    * Execute insert/update/delete operation
    */
-  protected executeCommand(
+  protected async executeCommand(
     operation: string,
     query: string,
     params: any[] = []
-  ): { changes: number; lastInsertRowid: number } {
+  ): Promise<{ changes: number; lastInsertRowid?: number }> {
     try {
-      const result = this.db.run(query, ...params);
+      const result = await this.db.run(query, ...params);
       return {
         changes: result.changes || 0,
-        lastInsertRowid: Number(result.lastInsertRowid || 0)
+        lastInsertRowid: result.lastInsertRowid
       };
     } catch (error) {
       ErrorHandler.logError(error as Error, {
@@ -97,12 +97,12 @@ export abstract class BaseRepository {
   /**
    * Count total records matching criteria
    */
-  protected count(
+  protected async count(
     operation: string,
     query: string,
     params: any[] = []
-  ): number {
-    const result = this.executeQuery<{ count: number }>(
+  ): Promise<number> {
+    const result = await this.executeQuery<{ count: number }>(
       operation,
       query,
       params
@@ -113,16 +113,16 @@ export abstract class BaseRepository {
   /**
    * Check if record exists
    */
-  protected exists(
+  protected async exists(
     operation: string,
     query: string,
     params: any[] = []
-  ): boolean {
-    const result = this.executeQuery<{ exists: number }>(
+  ): Promise<boolean> {
+    const result = await this.executeQuery<{ exists: boolean }>(
       operation,
       `SELECT EXISTS(${query}) as exists`,
       params
     );
-    return result?.exists === 1;
+    return result?.exists === true;
   }
 }

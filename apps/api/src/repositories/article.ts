@@ -36,10 +36,10 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Find article by ID
    */
-  findById(id: string): DatabaseArticle | null {
-    return this.executeQuery<DatabaseArticle>(
+  async findById(id: string): Promise<DatabaseArticle | null> {
+    return await this.executeQuery<DatabaseArticle>(
       'find_article_by_id',
-      'SELECT * FROM articles WHERE id = ?',
+      'SELECT * FROM articles WHERE id = $1',
       [id]
     );
   }
@@ -47,10 +47,10 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Find article by URL
    */
-  findByUrl(url: string): DatabaseArticle | null {
-    return this.executeQuery<DatabaseArticle>(
+  async findByUrl(url: string): Promise<DatabaseArticle | null> {
+    return await this.executeQuery<DatabaseArticle>(
       'find_article_by_url',
-      'SELECT * FROM articles WHERE url = ?',
+      'SELECT * FROM articles WHERE url = $1',
       [url]
     );
   }
@@ -58,7 +58,7 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Find articles with filtering and pagination
    */
-  findMany(options: DatabaseFilterOptions = { sortBy: 'publishedAt' }): DatabaseArticle[] {
+  async findMany(options: DatabaseFilterOptions = { sortBy: 'publishedAt' }): Promise<DatabaseArticle[]> {
     const {
       categories,
       dateFrom,
@@ -133,7 +133,7 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Count articles matching filters
    */
-  countMany(options: DatabaseFilterOptions = { sortBy: 'publishedAt' }): number {
+  async countMany(options: DatabaseFilterOptions = { sortBy: 'publishedAt' }): Promise<number> {
     const {
       categories,
       dateFrom,
@@ -185,16 +185,16 @@ export class ArticleRepository extends BaseRepository {
       params.push(keywordPattern, keywordPattern, keywordPattern);
     }
 
-    return this.count('count_articles_with_filters', query, params);
+    return await this.count('count_articles_with_filters', query, params);
   }
 
   /**
    * Find articles by feed ID
    */
-  findByFeedId(feedId: string, limit: number = 50): DatabaseArticle[] {
-    return this.executeQueryAll<DatabaseArticle>(
+  async findByFeedId(feedId: string, limit: number = 50): Promise<DatabaseArticle[]> {
+    return await this.executeQueryAll<DatabaseArticle>(
       'find_articles_by_feed',
-      'SELECT * FROM articles WHERE feed_id = ? ORDER BY published_at DESC LIMIT ?',
+      'SELECT * FROM articles WHERE feed_id = $1 ORDER BY published_at DESC LIMIT $2',
       [feedId, limit]
     );
   }
@@ -202,10 +202,10 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Find articles that need manual language review
    */
-  findNeedingLanguageReview(limit: number = 50): DatabaseArticle[] {
-    return this.executeQueryAll<DatabaseArticle>(
+  async findNeedingLanguageReview(limit: number = 50): Promise<DatabaseArticle[]> {
+    return await this.executeQueryAll<DatabaseArticle>(
       'find_articles_needing_review',
-      'SELECT * FROM articles WHERE needs_manual_language_review = 1 ORDER BY created_at DESC LIMIT ?',
+      'SELECT * FROM articles WHERE needs_manual_language_review = 1 ORDER BY created_at DESC LIMIT $1',
       [limit]
     );
   }
@@ -213,17 +213,17 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Create new article
    */
-  create(data: CreateArticleData): string {
+  async create(data: CreateArticleData): Promise<string> {
     const query = `
       INSERT INTO articles (
         id, feed_id, title, description, content, url,
         detected_language, needs_manual_language_review,
         summary, original_language,
         published_at, scraped_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `;
 
-    this.executeCommand(
+    await this.executeCommand(
       'create_article',
       query,
       [
@@ -249,42 +249,42 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Update existing article
    */
-  update(id: string, data: UpdateArticleData): boolean {
+  async update(id: string, data: UpdateArticleData): Promise<boolean> {
     const updates: string[] = [];
     const params: any[] = [];
 
     if (data.title !== undefined) {
-      updates.push('title = ?');
+      updates.push(`title = $${params.length + 1}`);
       params.push(data.title);
     }
 
     if (data.description !== undefined) {
-      updates.push('description = ?');
+      updates.push(`description = $${params.length + 1}`);
       params.push(data.description);
     }
 
     if (data.content !== undefined) {
-      updates.push('content = ?');
+      updates.push(`content = $${params.length + 1}`);
       params.push(data.content);
     }
 
     if (data.detected_language !== undefined) {
-      updates.push('detected_language = ?');
+      updates.push(`detected_language = $${params.length + 1}`);
       params.push(data.detected_language);
     }
 
     if (data.needs_manual_language_review !== undefined) {
-      updates.push('needs_manual_language_review = ?');
+      updates.push(`needs_manual_language_review = $${params.length + 1}`);
       params.push(data.needs_manual_language_review ? 1 : 0);
     }
 
     if (data.summary !== undefined) {
-      updates.push('summary = ?');
+      updates.push(`summary = $${params.length + 1}`);
       params.push(data.summary);
     }
 
     if (data.original_language !== undefined) {
-      updates.push('original_language = ?');
+      updates.push(`original_language = $${params.length + 1}`);
       params.push(data.original_language);
     }
 
@@ -293,19 +293,19 @@ export class ArticleRepository extends BaseRepository {
     }
 
     params.push(id);
-    const query = `UPDATE articles SET ${updates.join(', ')} WHERE id = ?`;
+    const query = `UPDATE articles SET ${updates.join(', ')} WHERE id = $${params.length}`;
 
-    const result = this.executeCommand('update_article', query, params);
+    const result = await this.executeCommand('update_article', query, params);
     return result.changes > 0;
   }
 
   /**
    * Delete article by ID
    */
-  delete(id: string): boolean {
-    const result = this.executeCommand(
+  async delete(id: string): Promise<boolean> {
+    const result = await this.executeCommand(
       'delete_article',
-      'DELETE FROM articles WHERE id = ?',
+      'DELETE FROM articles WHERE id = $1',
       [id]
     );
     return result.changes > 0;
@@ -314,10 +314,10 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Check if article exists by URL
    */
-  existsByUrl(url: string): boolean {
-    return this.exists(
+  async existsByUrl(url: string): Promise<boolean> {
+    return await this.exists(
       'article_exists_by_url',
-      'SELECT 1 FROM articles WHERE url = ?',
+      'SELECT 1 FROM articles WHERE url = $1',
       [url]
     );
   }
@@ -325,10 +325,10 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Get recent articles for a language
    */
-  findRecentByLanguage(language: string, limit: number = 10): DatabaseArticle[] {
-    return this.executeQueryAll<DatabaseArticle>(
+  async findRecentByLanguage(language: string, limit: number = 10): Promise<DatabaseArticle[]> {
+    return await this.executeQueryAll<DatabaseArticle>(
       'find_recent_articles_by_language',
-      'SELECT * FROM articles WHERE detected_language = ? ORDER BY published_at DESC LIMIT ?',
+      'SELECT * FROM articles WHERE detected_language = $1 ORDER BY published_at DESC LIMIT $2',
       [language, limit]
     );
   }
@@ -336,15 +336,15 @@ export class ArticleRepository extends BaseRepository {
   /**
    * Get articles statistics
    */
-  getStatistics(): {
+  async getStatistics(): Promise<{
     total: number;
     byLanguage: Record<string, number>;
     needingReview: number;
     recentCount: number;
-  } {
-    const total = this.count('total_articles', 'SELECT COUNT(*) as count FROM articles');
+  }> {
+    const total = await this.count('total_articles', 'SELECT COUNT(*) as count FROM articles');
 
-    const languageStats = this.executeQueryAll<{ language: string; count: number }>(
+    const languageStats = await this.executeQueryAll<{ language: string; count: number }>(
       'articles_by_language',
       'SELECT detected_language as language, COUNT(*) as count FROM articles WHERE detected_language IS NOT NULL GROUP BY detected_language'
     );
@@ -354,14 +354,14 @@ export class ArticleRepository extends BaseRepository {
       return acc;
     }, {} as Record<string, number>);
 
-    const needingReview = this.count(
+    const needingReview = await this.count(
       'articles_needing_review',
       'SELECT COUNT(*) as count FROM articles WHERE needs_manual_language_review = 1'
     );
 
-    const recentCount = this.count(
+    const recentCount = await this.count(
       'recent_articles',
-      'SELECT COUNT(*) as count FROM articles WHERE created_at > datetime(\'now\', \'-7 days\')'
+      'SELECT COUNT(*) as count FROM articles WHERE created_at > NOW() - INTERVAL \'7 days\''
     );
 
     return {

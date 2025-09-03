@@ -1,5 +1,4 @@
-import { Database } from "better-sqlite3";
-import { getDatabase } from "../database/connection.js";
+import { DatabaseConnection, getDatabase } from "../database/connection.js";
 import { v4 as uuidv4 } from "uuid";
 
 export interface DatabasePollingJob {
@@ -49,52 +48,46 @@ export interface UpdatePollingJobData {
 }
 
 export class PollingJobRepository {
-  private db: Database;
+  private db: DatabaseConnection;
 
   constructor() {
     this.db = getDatabase();
   }
 
-  findAll(page: number = 1, limit: number = 20): { data: DatabasePollingJob[]; total: number } {
+  async findAll(page: number = 1, limit: number = 20): Promise<{ data: DatabasePollingJob[]; total: number }> {
     const offset = (page - 1) * limit;
     
-    const countStmt = this.db.prepare('SELECT COUNT(*) as count FROM polling_jobs');
-    const total = (countStmt.get() as { count: number }).count;
+    const totalResult = await this.db.get('SELECT COUNT(*) as count FROM polling_jobs');
+    const total = (totalResult as { count: number }).count;
     
-    const stmt = this.db.prepare(`
+    const data = await this.db.all(`
       SELECT * FROM polling_jobs 
       ORDER BY created_at DESC 
-      LIMIT ? OFFSET ?
-    `);
-    
-    const data = stmt.all(limit, offset) as DatabasePollingJob[];
+      LIMIT $1 OFFSET $2
+    `, limit, offset) as DatabasePollingJob[];
     
     return { data, total };
   }
 
-  findActive(): DatabasePollingJob[] {
-    const stmt = this.db.prepare('SELECT * FROM polling_jobs WHERE is_active = TRUE ORDER BY next_run_time ASC');
-    return stmt.all() as DatabasePollingJob[];
+  async findActive(): Promise<DatabasePollingJob[]> {
+    return await this.db.all('SELECT * FROM polling_jobs WHERE is_active = true ORDER BY next_run_time ASC') as DatabasePollingJob[];
   }
 
-  findById(id: string): DatabasePollingJob | null {
-    const stmt = this.db.prepare('SELECT * FROM polling_jobs WHERE id = ?');
-    return (stmt.get(id) as DatabasePollingJob) || null;
+  async findById(id: string): Promise<DatabasePollingJob | null> {
+    return await this.db.get('SELECT * FROM polling_jobs WHERE id = $1', id) as DatabasePollingJob | null;
   }
 
-  create(data: CreatePollingJobData): DatabasePollingJob {
+  async create(data: CreatePollingJobData): Promise<DatabasePollingJob> {
     const id = uuidv4();
     const now = new Date().toISOString();
     const nextRunTime = new Date(Date.now() + data.interval_minutes * 60 * 1000).toISOString();
 
-    const stmt = this.db.prepare(`
+    const result = await this.db.run(`
       INSERT INTO polling_jobs (
         id, name, description, is_active, interval_minutes, feed_filters,
         next_run_time, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `,
       id,
       data.name,
       data.description || null,
@@ -110,11 +103,15 @@ export class PollingJobRepository {
       throw new Error('Failed to create polling job');
     }
 
-    return this.findById(id)!;
+    const created = await this.findById(id);
+    if (!created) {
+      throw new Error('Failed to retrieve created polling job');
+    }
+    return created;
   }
 
-  update(id: string, data: UpdatePollingJobData): DatabasePollingJob | null {
-    const existing = this.findById(id);
+  async update(id: string, data: UpdatePollingJobData): Promise<DatabasePollingJob | null> {
+    const existing = await this.findById(id);
     if (!existing) return null;
 
     const now = new Date().toISOString();
@@ -171,48 +168,43 @@ export class PollingJobRepository {
     values.push(now);
     values.push(id);
 
-    const stmt = this.db.prepare(`
+    const result = await this.db.run(`
       UPDATE polling_jobs 
       SET ${updates.join(', ')} 
-      WHERE id = ?
-    `);
-
-    const result = stmt.run(...values);
+      WHERE id = $${values.length}
+    `, ...values);
 
     if (result.changes === 0) {
       throw new Error('Failed to update polling job');
     }
 
-    return this.findById(id)!;
+    return await this.findById(id);
   }
 
-  delete(id: string): boolean {
-    const stmt = this.db.prepare('DELETE FROM polling_jobs WHERE id = ?');
-    const result = stmt.run(id);
+  async delete(id: string): Promise<boolean> {
+    const result = await this.db.run('DELETE FROM polling_jobs WHERE id = $1', id);
     return result.changes > 0;
   }
 
-  updateRunStats(id: string, stats: PollingJobStats, success: boolean): void {
-    const job = this.findById(id);
+  async updateRunStats(id: string, stats: PollingJobStats, success: boolean): Promise<void> {
+    const job = await this.findById(id);
     if (!job) return;
 
     const now = new Date().toISOString();
     const nextRunTime = new Date(Date.now() + job.interval_minutes * 60 * 1000).toISOString();
 
-    const stmt = this.db.prepare(`
+    await this.db.run(`
       UPDATE polling_jobs 
       SET 
-        last_run_time = ?,
-        next_run_time = ?,
+        last_run_time = $1,
+        next_run_time = $2,
         total_runs = total_runs + 1,
-        successful_runs = successful_runs + ?,
-        failed_runs = failed_runs + ?,
-        last_run_stats = ?,
-        updated_at = ?
-      WHERE id = ?
-    `);
-
-    stmt.run(
+        successful_runs = successful_runs + $3,
+        failed_runs = failed_runs + $4,
+        last_run_stats = $5,
+        updated_at = $6
+      WHERE id = $7
+    `,
       now,
       job.is_active ? nextRunTime : null,
       success ? 1 : 0,
@@ -223,16 +215,15 @@ export class PollingJobRepository {
     );
   }
 
-  findJobsDueForExecution(): DatabasePollingJob[] {
+  async findJobsDueForExecution(): Promise<DatabasePollingJob[]> {
     const now = new Date().toISOString();
-    const stmt = this.db.prepare(`
+    return await this.db.all(`
       SELECT * FROM polling_jobs 
       WHERE is_active = TRUE 
       AND next_run_time IS NOT NULL 
-      AND next_run_time <= ? 
+      AND next_run_time <= $1 
       ORDER BY next_run_time ASC
-    `);
-    return stmt.all(now) as DatabasePollingJob[];
+    `, now) as DatabasePollingJob[];
   }
 }
 

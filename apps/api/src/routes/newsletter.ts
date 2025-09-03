@@ -60,12 +60,15 @@ export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
     
     try {
       // Fetch articles from database using repository
-      const dbArticles = body.article_ids.map(id => articleRepository.findById(id)).filter(Boolean);
-      const articles = dbArticles.map(article => ({
-        title: article!.title,
-        url: article!.url,
-        description: article!.description,
-        detected_language: article!.detected_language
+      const dbArticles = await Promise.all(
+        body.article_ids.map(id => articleRepository.findById(id))
+      );
+      const filteredArticles = dbArticles.filter(Boolean) as NonNullable<typeof dbArticles[number]>[];
+      const articles = filteredArticles.map(article => ({
+        title: article.title,
+        url: article.url,
+        description: article.description,
+        detected_language: article.detected_language
       }));
 
       if (articles.length === 0) {
@@ -120,21 +123,22 @@ export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
         WHERE 1=1
       `;
       const params: any[] = [];
+      let paramIndex = 1;
 
       if (query.language) {
-        sql += ` AND a.detected_language = ?`;
+        sql += ` AND a.detected_language = $${paramIndex++}`;
         params.push(query.language);
       }
 
       if (query.feed_id) {
-        sql += ` AND a.feed_id = ?`;
+        sql += ` AND a.feed_id = $${paramIndex++}`;
         params.push(query.feed_id);
       }
 
-      sql += ` ORDER BY a.published_at DESC LIMIT ?`;
+      sql += ` ORDER BY a.published_at DESC LIMIT $${paramIndex++}`;
       params.push(query.limit);
 
-      const articles = db.all(sql, params);
+      const articles = await db.all(sql, params);
 
       return reply.send({
         data: articles,

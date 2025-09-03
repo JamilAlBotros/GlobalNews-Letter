@@ -14,6 +14,7 @@ import {
   Database,
   Settings,
   Play,
+  Mail,
 } from 'lucide-react';
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Feed Sources', href: '/feeds/sources', icon: Globe },
   { name: 'Feed Instances', href: '/feeds/instances', icon: Rss },
   { name: 'Articles', href: '/articles', icon: FileText },
+  { name: 'Newsletter', href: '/newsletter', icon: Mail },
   { name: 'Polling', href: '/polling', icon: Play },
   { name: 'Translations', href: '/translations', icon: Languages },
   { name: 'Health Monitor', href: '/health', icon: Activity },

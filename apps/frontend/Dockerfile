@@ -17,6 +17,7 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source code (excluding node_modules which are already installed)
 COPY apps/frontend/src ./apps/frontend/src
+COPY apps/frontend/public ./apps/frontend/public
 COPY apps/frontend/next.config* ./apps/frontend/
 COPY apps/frontend/tailwind.config* ./apps/frontend/
 COPY apps/frontend/postcss.config* ./apps/frontend/
@@ -34,8 +35,8 @@ RUN pnpm build --workspace=apps/frontend
 # Production stage
 FROM node:20-alpine AS runtime
 
-# Install TypeScript globally for development commands
-RUN npm install -g typescript
+# Install pnpm and TypeScript globally for development commands
+RUN npm install -g pnpm typescript
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -44,16 +45,25 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy built application
+# Copy package files first
+COPY --from=builder --chown=nodejs:nodejs /app/package*.json /app/pnpm-*.yaml ./
+COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/package.json ./apps/frontend/
+COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/package.json ./packages/contracts/
+
+# Copy built Next.js application with correct structure for standalone mode
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/standalone ./
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
+COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/public ./apps/frontend/public
 
-# Copy source files and config for development commands
+# Copy source files for development commands
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/src ./apps/frontend/src
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/tsconfig*.json ./apps/frontend/
-COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/package.json ./apps/frontend/
 COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/src ./packages/contracts/src
 COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/tsconfig*.json ./packages/contracts/
+COPY --from=builder --chown=nodejs:nodejs /app/tsconfig*.json ./
+
+# Install all dependencies using pnpm for development commands
+RUN pnpm install --frozen-lockfile
 
 # Switch to non-root user
 USER nodejs
@@ -63,7 +73,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
+  CMD node -e "require('http').get('http://localhost:3000/', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
 
 # Start the application
 CMD ["node", "apps/frontend/server.js"]

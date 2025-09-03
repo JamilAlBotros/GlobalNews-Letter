@@ -47,7 +47,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
   // Get current polling status
   app.get("/polling/status", async (request, reply) => {
-    const feedStats = feedRepository.getStatistics();
+    const feedStats = await feedRepository.getStatistics();
     const activeFeedsCount = feedStats.active;
 
     const nextPollTime = pollingState.isRunning && pollingState.lastPollTime
@@ -185,7 +185,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
   // Get active feeds status
   app.get("/polling/feeds/status", async (request, reply) => {
-    const feeds = feedRepository.findActive();
+    const feeds = await feedRepository.findActive();
 
     const feedStatuses = feeds.map(feed => {
       // Real implementation would track actual feed metrics in database
@@ -236,7 +236,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     const llmService = new LLMService();
     
     // Get article from database
-    const article = articleRepository.findById(articleId);
+    const article = await articleRepository.findById(articleId);
     if (!article) {
       throw Object.assign(new Error("Article not found"), {
         status: 404,
@@ -246,7 +246,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
 
     try {
       // Get feed info for processing context
-      const feed = feedRepository.findById(article.feed_id);
+      const feed = await feedRepository.findById(article.feed_id);
       
       // Process with LLM
       const processedResult = await processArticleWithLLM({
@@ -264,7 +264,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       }, llmService);
 
       // Update article with processed data
-      articleRepository.update(articleId, {
+      await articleRepository.update(articleId, {
         detected_language: processedResult.detectedLanguage,
         needs_manual_language_review: processedResult.needsManualReview,
         summary: processedResult.summary || null,
@@ -294,10 +294,11 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   app.get("/polling/jobs", async (request, reply) => {
     const { page = 1, limit = 20 } = request.query as { page?: number; limit?: number };
     
-    const result = pollingJobRepository.findAll(Number(page), Number(limit));
+    const result = await pollingJobRepository.findAll(Number(page), Number(limit));
     
     const jobs = result.data.map(job => ({
       ...job,
+      description: job.description || undefined,
       feed_filters: JSON.parse(job.feed_filters),
       last_run_stats: job.last_run_stats ? JSON.parse(job.last_run_stats) : null
     }));
@@ -319,7 +320,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   app.get("/polling/jobs/:jobId", async (request, reply) => {
     const { jobId } = request.params as { jobId: string };
     
-    const job = pollingJobRepository.findById(jobId);
+    const job = await pollingJobRepository.findById(jobId);
     if (!job) {
       throw Object.assign(new Error("Polling job not found"), {
         status: 404,
@@ -341,7 +342,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     const body = CreatePollingJobInput.parse(request.body);
     
     // Check if we have reached the limit of 10 jobs
-    const existingJobs = pollingJobRepository.findAll(1, 100);
+    const existingJobs = await pollingJobRepository.findAll(1, 100);
     if (existingJobs.total >= 10) {
       throw Object.assign(new Error("Maximum polling jobs limit reached"), {
         status: 400,
@@ -349,7 +350,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     
-    const job = pollingJobRepository.create(body);
+    const job = await pollingJobRepository.create(body);
     
     const response = {
       ...job,
@@ -365,7 +366,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     const { jobId } = request.params as { jobId: string };
     const body = UpdatePollingJobInput.parse(request.body);
     
-    const job = pollingJobRepository.update(jobId, body);
+    const job = await pollingJobRepository.update(jobId, body);
     if (!job) {
       throw Object.assign(new Error("Polling job not found"), {
         status: 404,
@@ -386,7 +387,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/polling/jobs/:jobId", async (request, reply) => {
     const { jobId } = request.params as { jobId: string };
     
-    const deleted = pollingJobRepository.delete(jobId);
+    const deleted = await pollingJobRepository.delete(jobId);
     if (!deleted) {
       throw Object.assign(new Error("Polling job not found"), {
         status: 404,
@@ -401,7 +402,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   app.post("/polling/jobs/:jobId/execute", async (request, reply) => {
     const { jobId } = request.params as { jobId: string };
     
-    const job = pollingJobRepository.findById(jobId);
+    const job = await pollingJobRepository.findById(jobId);
     if (!job) {
       throw Object.assign(new Error("Polling job not found"), {
         status: 404,
@@ -416,7 +417,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       const endTime = performance.now();
       
       // Update job stats
-      pollingJobRepository.updateRunStats(jobId, {
+      await pollingJobRepository.updateRunStats(jobId, {
         feeds_processed: result.feedsProcessed,
         articles_found: result.articlesFound,
         execution_time_ms: endTime - startTime
@@ -433,7 +434,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       });
     } catch (error) {
       // Update job stats for failure
-      pollingJobRepository.updateRunStats(jobId, {
+      await pollingJobRepository.updateRunStats(jobId, {
         feeds_processed: 0,
         articles_found: 0,
         execution_time_ms: 0
@@ -486,7 +487,7 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
     pollingState.totalPolls++;
 
     // Get active feeds
-    const activeFeeds = feedRepository.findActive();
+    const activeFeeds = await feedRepository.findActive();
 
     let totalArticlesFound = 0;
 
@@ -504,12 +505,12 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
           if (!article.url || !article.title) continue;
           
           // Check if article already exists by URL
-          const existing = articleRepository.findByUrl(article.url);
+          const existing = await articleRepository.findByUrl(article.url);
           
           if (!existing) {
             // Save article immediately without LLM processing
             const articleId = generateUUID();
-            articleRepository.create({
+            await articleRepository.create({
               id: articleId,
               feed_id: feed.id,
               title: article.title,
@@ -532,7 +533,7 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
         totalArticlesFound += newArticles;
         
         // Update feed timestamp to track polling activity
-        feedRepository.updateLastFetched(feed.id);
+        await feedRepository.updateLastFetched(feed.id);
         
         if (newArticles > 0) {
           console.log(`Added ${newArticles} new articles from ${feed.name}`);
@@ -559,7 +560,7 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
 async function executePollingJobWithFilters(filters: any): Promise<{ feedsProcessed: number; articlesFound: number }> {
   try {
     // Get feeds based on filters
-    let feeds = feedRepository.findActive();
+    let feeds = await feedRepository.findActive();
     
     // Apply filters
     if (filters.feed_ids && filters.feed_ids.length > 0) {
@@ -598,12 +599,12 @@ async function executePollingJobWithFilters(filters: any): Promise<{ feedsProces
           if (!article.url || !article.title) continue;
           
           // Check if article already exists by URL
-          const existing = articleRepository.findByUrl(article.url);
+          const existing = await articleRepository.findByUrl(article.url);
           
           if (!existing) {
             // Save article immediately without LLM processing
             const articleId = generateUUID();
-            articleRepository.create({
+            await articleRepository.create({
               id: articleId,
               feed_id: feed.id,
               title: article.title,
@@ -626,7 +627,7 @@ async function executePollingJobWithFilters(filters: any): Promise<{ feedsProces
         totalArticlesFound += newArticles;
         
         // Update feed timestamp to track polling activity
-        feedRepository.updateLastFetched(feed.id);
+        await feedRepository.updateLastFetched(feed.id);
         
         if (newArticles > 0) {
           console.log(`Added ${newArticles} new articles from ${feed.name}`);

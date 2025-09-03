@@ -136,8 +136,18 @@ export async function closeDatabase(): Promise<void> {
   }
 }
 
-export function resetDatabase(): void {
-  closeDatabase();
+export async function resetDatabase(): Promise<void> {
+  if (globalConnection) {
+    try {
+      // Clear all data in proper order (respecting foreign keys)
+      await globalConnection.run("DELETE FROM articles");
+      await globalConnection.run("DELETE FROM polling_jobs");
+      await globalConnection.run("DELETE FROM feeds");
+    } catch (error) {
+      console.warn("Error during database reset:", error);
+    }
+  }
+  await closeDatabase();
 }
 
 export async function healthCheck(): Promise<boolean> {

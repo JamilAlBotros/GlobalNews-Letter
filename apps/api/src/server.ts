@@ -11,6 +11,7 @@ import { pollingRoutes } from "./routes/polling.js";
 import { translationRoutes } from "./routes/translation.js";
 import { newsletterRoutes } from "./routes/newsletter.js";
 import { llmRoutes } from "./routes/llm.js";
+import { pollingScheduler } from "./services/polling-scheduler.js";
 
 const app = Fastify({
   logger: {
@@ -121,6 +122,8 @@ const start = async (): Promise<void> => {
 const shutdown = async (signal: string): Promise<void> => {
   console.log(`\nReceived ${signal}, shutting down gracefully...`);
   try {
+    // Stop polling scheduler first
+    await pollingScheduler.stop();
     await app.close();
     console.log("Server closed successfully");
     process.exit(0);

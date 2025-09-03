@@ -147,37 +147,37 @@ export class FeedRepository extends BaseRepository {
     const params: any[] = [];
 
     if (data.name !== undefined) {
-      updates.push('name = ?');
+      updates.push(`name = $${params.length + 1}`);
       params.push(data.name);
     }
 
     if (data.url !== undefined) {
-      updates.push('url = ?');
+      updates.push(`url = $${params.length + 1}`);
       params.push(data.url);
     }
 
     if (data.category !== undefined) {
-      updates.push('category = ?');
+      updates.push(`category = $${params.length + 1}`);
       params.push(data.category);
     }
 
     if (data.language !== undefined) {
-      updates.push('language = ?');
+      updates.push(`language = $${params.length + 1}`);
       params.push(data.language);
     }
 
     if (data.description !== undefined) {
-      updates.push('description = ?');
+      updates.push(`description = $${params.length + 1}`);
       params.push(data.description);
     }
 
     if (data.isActive !== undefined) {
-      updates.push('is_active = ?');
+      updates.push(`is_active = $${params.length + 1}`);
       params.push(data.isActive ? 1 : 0);
     }
 
     if (data.lastFetched !== undefined) {
-      updates.push('last_fetched = ?');
+      updates.push(`last_fetched = $${params.length + 1}`);
       params.push(data.lastFetched);
     }
 
@@ -186,11 +186,11 @@ export class FeedRepository extends BaseRepository {
     }
 
     // Always update the updated_at timestamp
-    updates.push('updated_at = ?');
+    updates.push(`updated_at = $${params.length + 1}`);
     params.push(new Date().toISOString());
 
     params.push(id);
-    const query = `UPDATE feeds SET ${updates.join(', ')} WHERE id = ?`;
+    const query = `UPDATE feeds SET ${updates.join(', ')} WHERE id = $${params.length}`;
 
     const result = await this.executeCommand('update_feed', query, params);
     return result.changes > 0;
@@ -236,7 +236,7 @@ export class FeedRepository extends BaseRepository {
   async existsByUrl(url: string): Promise<boolean> {
     return this.exists(
       'feed_exists_by_url',
-      'SELECT 1 FROM feeds WHERE url = ?',
+      'SELECT 1 FROM feeds WHERE url = $1',
       [url]
     );
   }
@@ -327,17 +327,17 @@ export class FeedRepository extends BaseRepository {
     }
 
     if (criteria.category) {
-      conditions.push('f.category = ?');
+      conditions.push(`f.category = $${params.length + 1}`);
       params.push(criteria.category);
     }
 
     if (criteria.language) {
-      conditions.push('f.language = ?');
+      conditions.push(`f.language = $${params.length + 1}`);
       params.push(criteria.language);
     }
 
     if (criteria.isActive !== undefined) {
-      conditions.push('f.is_active = ?');
+      conditions.push(`f.is_active = $${params.length + 1}`);
       params.push(criteria.isActive ? 1 : 0);
     }
 

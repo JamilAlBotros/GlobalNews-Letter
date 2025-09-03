@@ -22,7 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   const db = getDatabase();
-  db.run("DELETE FROM feeds");
+  await db.run("DELETE FROM feeds");
 });
 
 test("GET /feeds returns empty array when no feeds", async () => {
@@ -218,7 +218,7 @@ test("DELETE /feeds/:id deletes feed", async () => {
 test("GET /feeds with pagination", async () => {
   // First clear any existing feeds to ensure exact count
   const db = getDatabase();
-  db.run("DELETE FROM feeds");
+  await db.run("DELETE FROM feeds");
   
   for (let i = 0; i < 25; i++) {
     await app.inject({

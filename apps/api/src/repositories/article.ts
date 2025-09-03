@@ -81,34 +81,34 @@ export class ArticleRepository extends BaseRepository {
     const params: any[] = [];
 
     if (categories && categories.length > 0) {
-      const placeholders = categories.map(() => '?').join(',');
+      const placeholders = categories.map((_, i) => `$${params.length + i + 1}`).join(',');
       query += ` AND f.category IN (${placeholders})`;
       params.push(...categories);
     }
 
     if (language) {
-      query += ` AND a.language = ?`;
+      query += ` AND a.language = $${params.length + 1}`;
       params.push(language);
     }
 
     if (sources && sources.length > 0) {
-      const placeholders = sources.map(() => '?').join(',');
+      const placeholders = sources.map((_, i) => `$${params.length + i + 1}`).join(',');
       query += ` AND f.name IN (${placeholders})`;
       params.push(...sources);
     }
 
     if (dateFrom) {
-      query += ` AND a.published_at >= ?`;
+      query += ` AND a.published_at >= $${params.length + 1}`;
       params.push(dateFrom);
     }
 
     if (dateTo) {
-      query += ` AND a.published_at <= ?`;
+      query += ` AND a.published_at <= $${params.length + 1}`;
       params.push(dateTo);
     }
 
     if (keyword) {
-      query += ` AND (a.title LIKE ? OR a.description LIKE ? OR a.content LIKE ?)`;
+      query += ` AND (a.title LIKE $${params.length + 1} OR a.description LIKE $${params.length + 2} OR a.content LIKE $${params.length + 3})`;
       const keywordPattern = `%${keyword}%`;
       params.push(keywordPattern, keywordPattern, keywordPattern);
     }
@@ -120,7 +120,7 @@ export class ArticleRepository extends BaseRepository {
     query += ` ORDER BY ${sortColumn} DESC`;
 
     // Pagination
-    query += ` LIMIT ? OFFSET ?`;
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
     return this.executeQueryAll<DatabaseArticle>(
@@ -153,34 +153,34 @@ export class ArticleRepository extends BaseRepository {
     const params: any[] = [];
 
     if (categories && categories.length > 0) {
-      const placeholders = categories.map(() => '?').join(',');
+      const placeholders = categories.map((_, i) => `$${params.length + i + 1}`).join(',');
       query += ` AND f.category IN (${placeholders})`;
       params.push(...categories);
     }
 
     if (language) {
-      query += ` AND a.language = ?`;
+      query += ` AND a.language = $${params.length + 1}`;
       params.push(language);
     }
 
     if (sources && sources.length > 0) {
-      const placeholders = sources.map(() => '?').join(',');
+      const placeholders = sources.map((_, i) => `$${params.length + i + 1}`).join(',');
       query += ` AND f.name IN (${placeholders})`;
       params.push(...sources);
     }
 
     if (dateFrom) {
-      query += ` AND a.published_at >= ?`;
+      query += ` AND a.published_at >= $${params.length + 1}`;
       params.push(dateFrom);
     }
 
     if (dateTo) {
-      query += ` AND a.published_at <= ?`;
+      query += ` AND a.published_at <= $${params.length + 1}`;
       params.push(dateTo);
     }
 
     if (keyword) {
-      query += ` AND (a.title LIKE ? OR a.description LIKE ? OR a.content LIKE ?)`;
+      query += ` AND (a.title LIKE $${params.length + 1} OR a.description LIKE $${params.length + 2} OR a.content LIKE $${params.length + 3})`;
       const keywordPattern = `%${keyword}%`;
       params.push(keywordPattern, keywordPattern, keywordPattern);
     }

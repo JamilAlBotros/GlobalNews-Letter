@@ -46,6 +46,7 @@ As an admin, I want to preview the newsletter before sending, so that I can veri
 
 7. Legal / Compliance
 
+
 As a system, I want all content to be transformative (summarized/rephrased), so that I avoid copyright infringement.
 
 As a system, I want all articles properly attributed with links to the original source, so that users can access the original content and copyright rules are respected.

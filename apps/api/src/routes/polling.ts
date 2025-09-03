@@ -26,6 +26,7 @@ import { LLMService } from "../services/llm.js";
 import { ErrorHandler } from "../utils/errors.js";
 import { articleRepository, feedRepository } from "../repositories/index.js";
 import { pollingJobRepository } from "../repositories/polling-job.js";
+import { pollingScheduler } from "../services/polling-scheduler.js";
 import type { DatabaseArticle, DatabaseRSSFeed, Language, Category } from "../types/index.js";
 import { LanguageDetectionService } from '../services/language-detection.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,13 +50,14 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   app.get("/polling/status", async (request, reply) => {
     const feedStats = await feedRepository.getStatistics();
     const activeFeedsCount = feedStats.active;
+    const schedulerStatus = pollingScheduler.getStatus();
 
     const nextPollTime = pollingState.isRunning && pollingState.lastPollTime
       ? new Date(new Date(pollingState.lastPollTime).getTime() + pollingState.intervalMinutes * 60 * 1000).toISOString()
       : null;
 
     const status: PollingStatusType = {
-      is_running: pollingState.isRunning,
+      is_running: pollingState.isRunning || schedulerStatus.isRunning,
       interval_minutes: pollingState.intervalMinutes,
       last_poll_time: pollingState.lastPollTime,
       next_poll_time: nextPollTime,
@@ -68,11 +70,12 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(status);
   });
 
-  // Start polling
+  // Start polling (includes scheduler)
   app.post("/polling/start", async (request, reply) => {
     const body = StartPollingInput.parse(request.body);
+    const schedulerStatus = pollingScheduler.getStatus();
     
-    if (pollingState.isRunning) {
+    if (pollingState.isRunning || schedulerStatus.isRunning) {
       throw Object.assign(new Error("Polling is already running"), {
         status: 409,
         detail: "Stop polling first before starting again"
@@ -83,33 +86,40 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       pollingState.intervalMinutes = body.interval_minutes;
     }
 
+    // Start both legacy polling and new scheduler
     pollingState.isRunning = true;
     
-    // Start the polling timer
+    // Start the polling timer (legacy)
     const pollInterval = pollingState.intervalMinutes * 60 * 1000;
     pollingState.timer = setInterval(async () => {
       await executePoll();
     }, pollInterval);
+
+    // Start the polling scheduler for jobs
+    await pollingScheduler.start();
 
     // Execute first poll immediately
     await executePoll();
 
     return reply.send({
       success: true,
-      message: `Polling started with ${pollingState.intervalMinutes} minute interval`,
+      message: `Polling started with ${pollingState.intervalMinutes} minute interval (includes job scheduler)`,
       interval_minutes: pollingState.intervalMinutes
     });
   });
 
-  // Stop polling
+  // Stop polling (includes scheduler)
   app.post("/polling/stop", async (request, reply) => {
-    if (!pollingState.isRunning) {
+    const schedulerStatus = pollingScheduler.getStatus();
+    
+    if (!pollingState.isRunning && !schedulerStatus.isRunning) {
       throw Object.assign(new Error("Polling is not running"), {
         status: 409,
         detail: "Polling is already stopped"
       });
     }
 
+    // Stop legacy polling
     pollingState.isRunning = false;
     
     if (pollingState.timer) {
@@ -117,9 +127,12 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       pollingState.timer = null;
     }
 
+    // Stop polling scheduler
+    await pollingScheduler.stop();
+
     return reply.send({
       success: true,
-      message: "Polling stopped successfully"
+      message: "Polling stopped successfully (includes job scheduler)"
     });
   });
 
@@ -186,12 +199,13 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
   // Get active feeds status
   app.get("/polling/feeds/status", async (request, reply) => {
     const feeds = await feedRepository.findActive();
+    const schedulerStatus = pollingScheduler.getStatus();
 
     const feedStatuses = feeds.map(feed => {
       // Real implementation would track actual feed metrics in database
       // For now, return basic status based on feed data
       const lastFetchTime = feed.last_fetched;
-      const nextFetchTime = pollingState.isRunning
+      const nextFetchTime = (pollingState.isRunning || schedulerStatus.isRunning)
         ? new Date(Date.now() + pollingState.intervalMinutes * 60 * 1000).toISOString()
         : null;
 
@@ -222,7 +236,7 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
     };
 
     const response: ActiveFeedsStatusResponseType = {
-      polling_active: pollingState.isRunning,
+      polling_active: pollingState.isRunning || schedulerStatus.isRunning,
       feeds: feedStatuses,
       summary
     };

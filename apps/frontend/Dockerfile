@@ -28,8 +28,7 @@ COPY tsconfig*.json ./
 
 # Build contracts first
 RUN pnpm build --workspace=@mtrx/contracts
-
-# Build the frontend application
+# Build the frontend application  
 RUN pnpm build --workspace=apps/frontend
 
 # Production stage

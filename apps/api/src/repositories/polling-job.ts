@@ -117,61 +117,62 @@ export class PollingJobRepository {
     const now = new Date().toISOString();
     const updates: string[] = [];
     const values: any[] = [];
+    let paramIndex = 1;
 
     if (data.name !== undefined) {
-      updates.push('name = ?');
+      updates.push(`name = $${paramIndex++}`);
       values.push(data.name);
     }
 
     if (data.description !== undefined) {
-      updates.push('description = ?');
+      updates.push(`description = $${paramIndex++}`);
       values.push(data.description || null);
     }
 
     if (data.is_active !== undefined) {
-      updates.push('is_active = ?');
+      updates.push(`is_active = $${paramIndex++}`);
       values.push(data.is_active);
       
       // If activating, set next run time
       if (data.is_active) {
         const intervalMinutes = data.interval_minutes || existing.interval_minutes;
         const nextRunTime = new Date(Date.now() + intervalMinutes * 60 * 1000).toISOString();
-        updates.push('next_run_time = ?');
+        updates.push(`next_run_time = $${paramIndex++}`);
         values.push(nextRunTime);
       } else {
         // If deactivating, clear next run time
-        updates.push('next_run_time = ?');
+        updates.push(`next_run_time = $${paramIndex++}`);
         values.push(null);
       }
     }
 
     if (data.interval_minutes !== undefined) {
-      updates.push('interval_minutes = ?');
+      updates.push(`interval_minutes = $${paramIndex++}`);
       values.push(data.interval_minutes);
       
       // Update next run time if job is active
       if (existing.is_active || data.is_active) {
         const nextRunTime = new Date(Date.now() + data.interval_minutes * 60 * 1000).toISOString();
-        updates.push('next_run_time = ?');
+        updates.push(`next_run_time = $${paramIndex++}`);
         values.push(nextRunTime);
       }
     }
 
     if (data.feed_filters !== undefined) {
-      updates.push('feed_filters = ?');
+      updates.push(`feed_filters = $${paramIndex++}`);
       values.push(JSON.stringify(data.feed_filters));
     }
 
     if (updates.length === 0) return existing;
 
-    updates.push('updated_at = ?');
+    updates.push(`updated_at = $${paramIndex++}`);
     values.push(now);
     values.push(id);
 
     const result = await this.db.run(`
       UPDATE polling_jobs 
       SET ${updates.join(', ')} 
-      WHERE id = $${values.length}
+      WHERE id = $${paramIndex}
     `, ...values);
 
     if (result.changes === 0) {

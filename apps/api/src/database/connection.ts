@@ -29,6 +29,7 @@ function getConnectionConfig(): DatabaseConfig {
 
 export class PostgreSQLConnection implements DatabaseConnection {
   private pool: Pool;
+  private isClosed = false;
 
   constructor() {
     const config = getConnectionConfig();
@@ -88,7 +89,10 @@ export class PostgreSQLConnection implements DatabaseConnection {
 
   async close(): Promise<void> {
     try {
-      await this.pool.end();
+      if (!this.isClosed) {
+        await this.pool.end();
+        this.isClosed = true;
+      }
     } catch (error) {
       console.error("Database close error:", error);
       throw error;
@@ -137,17 +141,15 @@ export async function closeDatabase(): Promise<void> {
 }
 
 export async function resetDatabase(): Promise<void> {
-  if (globalConnection) {
-    try {
-      // Clear all data in proper order (respecting foreign keys)
-      await globalConnection.run("DELETE FROM articles");
-      await globalConnection.run("DELETE FROM polling_jobs");
-      await globalConnection.run("DELETE FROM feeds");
-    } catch (error) {
-      console.warn("Error during database reset:", error);
-    }
+  const db = getDatabase();
+  try {
+    // Clear all data in proper order (respecting foreign keys)
+    await db.run("DELETE FROM articles");
+    await db.run("DELETE FROM polling_jobs");
+    await db.run("DELETE FROM feeds");
+  } catch (error) {
+    console.warn("Error during database reset:", error);
   }
-  await closeDatabase();
 }
 
 export async function healthCheck(): Promise<boolean> {

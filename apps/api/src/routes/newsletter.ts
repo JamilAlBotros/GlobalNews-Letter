@@ -1,8 +1,8 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { newsletterService, NewsletterData, NewsletterLanguage } from "../services/newsletter.js";
-import { getDatabase } from "../database/connection.js";
-import { articleRepository } from "../repositories/index.js";
+import { articleRepository, feedRepository } from "../repositories/index.js";
+import type { DatabaseFilterOptions } from "../types/index.js";
 
 const GenerateNewsletterInput = z.object({
   title: z.string().min(1, "Title is required"),
@@ -26,8 +26,6 @@ const GenerateFromArticlesInput = z.object({
 
 
 export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
-  const db = getDatabase();
-
   // Generate newsletter from custom data
   app.post("/newsletter/generate", async (request, reply) => {
     const body = GenerateNewsletterInput.parse(request.body);
@@ -115,34 +113,41 @@ export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
     }).parse(request.query);
 
     try {
-      let sql = `
-        SELECT a.id, a.title, a.url, a.description, a.detected_language, 
-               a.published_at, f.name as feed_name
-        FROM articles a
-        LEFT JOIN feeds f ON a.feed_id = f.id
-        WHERE 1=1
-      `;
-      const params: any[] = [];
-      let paramIndex = 1;
+      // Use repository method with filter options
+      const filterOptions: DatabaseFilterOptions = {
+        language: query.language,
+        limit: query.limit,
+        offset: 0,
+        sortBy: 'publishedAt'
+      };
 
-      if (query.language) {
-        sql += ` AND a.detected_language = $${paramIndex++}`;
-        params.push(query.language);
-      }
-
+      const articles = await articleRepository.findMany(filterOptions);
+      
+      // Filter by feed_id if specified (since repository doesn't support feed_id filtering)
+      let filteredArticles = articles;
       if (query.feed_id) {
-        sql += ` AND a.feed_id = $${paramIndex++}`;
-        params.push(query.feed_id);
+        filteredArticles = articles.filter(article => article.feed_id === query.feed_id);
       }
 
-      sql += ` ORDER BY a.published_at DESC LIMIT $${paramIndex++}`;
-      params.push(query.limit);
-
-      const articles = await db.all(sql, params);
+      // Get feed names for each article
+      const articlesWithFeedNames = await Promise.all(
+        filteredArticles.map(async (article) => {
+          const feed = await feedRepository.findById(article.feed_id);
+          return {
+            id: article.id,
+            title: article.title,
+            url: article.url,
+            description: article.description,
+            detected_language: article.detected_language,
+            published_at: article.published_at,
+            feed_name: feed?.name || 'Unknown Feed'
+          };
+        })
+      );
 
       return reply.send({
-        data: articles,
-        total: articles.length,
+        data: articlesWithFeedNames,
+        total: articlesWithFeedNames.length,
         query: {
           limit: query.limit,
           language: query.language,

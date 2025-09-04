@@ -11,6 +11,7 @@ export const Feed = z.object({
   region: z.string().min(1),
   category: z.enum(["News", "Technology", "Finance", "Science", "Sports", "Entertainment", "Health", "Travel", "Education", "Business", "Politics", "Gaming", "Crypto", "Lifestyle"]),
   type: z.enum(["News", "Analysis", "Blog", "Tutorial", "Recipe", "Review", "Research"]),
+  description: z.string().optional(),
   is_active: z.boolean().default(true),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime()
@@ -23,6 +24,7 @@ export const CreateFeedInput = z.object({
   region: z.string().min(1),
   category: z.enum(["News", "Technology", "Finance", "Science", "Sports", "Entertainment", "Health", "Travel", "Education", "Business", "Politics", "Gaming", "Crypto", "Lifestyle"]),
   type: z.enum(["News", "Analysis", "Blog", "Tutorial", "Recipe", "Review", "Research"]),
+  description: z.string().optional(),
   is_active: z.boolean().default(true)
 });
 
@@ -33,6 +35,7 @@ export const UpdateFeedInput = z.object({
   region: z.string().min(1).optional(),
   category: z.enum(["News", "Technology", "Finance", "Science", "Sports", "Entertainment", "Health", "Travel", "Education", "Business", "Politics", "Gaming", "Crypto", "Lifestyle"]).optional(),
   type: z.enum(["News", "Analysis", "Blog", "Tutorial", "Recipe", "Review", "Research"]).optional(),
+  description: z.string().optional(),
   is_active: z.boolean().optional()
 });
 

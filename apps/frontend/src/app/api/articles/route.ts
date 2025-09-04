@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   
   // Try to fetch from backend first
   try {
-    const backendUrl = new URL('/articles', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333');
+    const backendUrl = new URL('/articles', process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001');
     searchParams.forEach((value, key) => {
       backendUrl.searchParams.append(key, value);
     });

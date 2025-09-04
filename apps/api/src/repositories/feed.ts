@@ -7,6 +7,8 @@ export interface CreateFeedData {
   url: string;
   category: string;
   language: string;
+  region: string;
+  type: string;
   description?: string | null;
   isActive?: boolean;
   created_at: string;
@@ -115,9 +117,9 @@ export class FeedRepository extends BaseRepository {
   async create(data: CreateFeedData): Promise<string> {
     const query = `
       INSERT INTO feeds (
-        id, name, url, category, language, description, 
+        id, name, url, language, region, category, type, description,
         is_active, last_fetched, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL, $10, $11)
     `;
 
     await this.executeCommand(
@@ -127,8 +129,10 @@ export class FeedRepository extends BaseRepository {
         data.id,
         data.name,
         data.url,
-        data.category,
         data.language,
+        data.region,
+        data.category,
+        data.type,
         data.description || null,
         data.isActive !== false ? 1 : 0, // Default to active
         data.created_at,

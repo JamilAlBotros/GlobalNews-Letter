@@ -8,7 +8,7 @@ let app: FastifyInstance;
 
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
-  resetDatabase(); // Ensure clean database state
+  await resetDatabase(); // Ensure clean database state
   
   app = Fastify();
   await app.register(feedRoutes);
@@ -44,12 +44,13 @@ test("GET /feeds returns empty array when no feeds", async () => {
 
 test("POST /feeds creates a new feed", async () => {
   const feedData = {
-    name: "CNN Top Stories",
+    name: "CNN Top Stories", 
     url: "https://rss.cnn.com/rss/cnn_topstories.rss",
     language: "English",
     region: "Global",
     category: "News",
     type: "News",
+    description: "Test feed description",
     is_active: true
   };
 
@@ -59,7 +60,21 @@ test("POST /feeds creates a new feed", async () => {
     payload: feedData
   });
 
-  expect(response.statusCode).toBe(201);
+  //if (response.statusCode !== 201) {
+    //console.error('Feed creation failed. Response:', {
+    //  statusCode: response.statusCode,
+    //  body: response.body
+  //  });
+//  }
+
+  if (response.statusCode !== 201) {        
+    console.log('ACTUAL RESPONSE:', {       
+      status: response.statusCode,
+      body: response.body
+    });
+  }
+  expect(response.statusCode).toBe(201);  
+  
   const body = JSON.parse(response.body);
   expect(body).toMatchObject({
     name: "CNN Top Stories",
@@ -77,12 +92,13 @@ test("POST /feeds creates a new feed", async () => {
 
 test("POST /feeds returns 409 for duplicate URL", async () => {
   const feedData = {
-    name: "CNN Top Stories",
+    name: "CNN Top Stories", 
     url: "https://rss.cnn.com/rss/cnn_topstories.rss",
     language: "English",
     region: "Global",
     category: "News",
     type: "News",
+    description: "Test feed description",
     is_active: true
   };
 

@@ -1,6 +1,7 @@
 import { PollingDashboard } from '@/components/polling/polling-dashboard';
 import { PollingControls } from '@/components/polling/polling-controls';
 import { ActiveFeedsMonitor } from '@/components/polling/active-feeds-monitor';
+import { PollingJobsManager } from '@/components/polling/polling-jobs-manager';
 
 export default function PollingPage() {
   return (
@@ -19,6 +20,8 @@ export default function PollingPage() {
           <PollingDashboard />
         </div>
       </div>
+      
+      <PollingJobsManager />
     </div>
   );
 }

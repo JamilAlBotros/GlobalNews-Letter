@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { Globe, Star, Edit, Trash2, Loader2, AlertCircle } from 'lucide-react';
@@ -9,10 +9,25 @@ export function FeedSourcesList() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [isClient, setIsClient] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  
+  const queryClient = useQueryClient();
 
   const { data: feeds, isLoading, error, refetch } = useQuery({
     queryKey: ['feeds'],
     queryFn: () => apiClient.getFeeds(1, 100),
+  });
+
+  const deleteFeedMutation = useMutation({
+    mutationFn: (feedId: string) => apiClient.deleteFeed(feedId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      setDeleteConfirmId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete feed:', error);
+      setDeleteConfirmId(null);
+    },
   });
 
   useEffect(() => {
@@ -29,6 +44,20 @@ export function FeedSourcesList() {
 
   const getLanguageLabel = (language: string) => {
     return language; // Already in full form like "English", "Spanish", etc.
+  };
+
+  const handleDeleteFeed = (feedId: string) => {
+    setDeleteConfirmId(feedId);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteFeedMutation.mutate(deleteConfirmId);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmId(null);
   };
 
   if (isLoading) {
@@ -177,11 +206,23 @@ export function FeedSourcesList() {
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <button className="p-1 text-gray-400 hover:text-gray-600">
+                  <button 
+                    className="p-1 text-gray-400 hover:text-gray-600"
+                    title="Edit feed"
+                  >
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button className="p-1 text-gray-400 hover:text-red-600">
-                    <Trash2 className="h-4 w-4" />
+                  <button 
+                    className="p-1 text-gray-400 hover:text-red-600"
+                    onClick={() => handleDeleteFeed(feed.id)}
+                    disabled={deleteFeedMutation.isPending}
+                    title="Delete feed"
+                  >
+                    {deleteFeedMutation.isPending && deleteConfirmId === feed.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -197,6 +238,47 @@ export function FeedSourcesList() {
           <p className="mt-1 text-sm text-gray-500">
             Try adjusting your filters or create a new feed.
           </p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-medium text-gray-900">
+                Delete Feed Source
+              </h3>
+            </div>
+            
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete this feed source? This action cannot be undone and will also delete all articles associated with this feed.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteFeedMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteFeedMutation.isPending ? (
+                  <span className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Deleting...
+                  </span>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

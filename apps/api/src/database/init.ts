@@ -12,6 +12,7 @@ export async function initializeDatabase(): Promise<void> {
       region TEXT NOT NULL,
       category TEXT NOT NULL,
       type TEXT NOT NULL,
+      description TEXT,
       is_active BOOLEAN DEFAULT TRUE,
       last_fetched TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,

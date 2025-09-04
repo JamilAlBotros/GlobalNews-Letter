@@ -71,6 +71,20 @@ export class ArticleRepository extends BaseRepository {
       offset = 0
     } = options;
 
+    // If no filters are provided, use a simple query
+    if (!categories && !dateFrom && !dateTo && !sources && !language && !keyword) {
+      const sortColumn = sortBy === 'publishedAt' ? 'published_at' : 
+                        sortBy === 'popularity' ? 'created_at' : 
+                        'created_at';
+      
+      return this.executeQueryAll<DatabaseArticle>(
+        'find_articles_simple',
+        `SELECT * FROM articles ORDER BY ${sortColumn} DESC LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+    }
+
+    // Complex query with filters
     let query = `
       SELECT a.* 
       FROM articles a 
@@ -142,6 +156,11 @@ export class ArticleRepository extends BaseRepository {
       language,
       keyword
     } = options;
+
+    // If no filters are provided, use a simple count
+    if (!categories && !dateFrom && !dateTo && !sources && !language && !keyword) {
+      return await this.count('count_articles_simple', 'SELECT COUNT(*) as count FROM articles');
+    }
 
     let query = `
       SELECT COUNT(*) as count 

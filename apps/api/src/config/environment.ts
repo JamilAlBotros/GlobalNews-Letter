@@ -6,13 +6,13 @@ const EnvironmentSchema = z.object({
   DATABASE_URL: z.string().default('./data/newsletter.db'),
   
   // LLM Configuration
-  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'mock']).default('mock'),
+  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'ollama', 'mock']).default('ollama'),
   LLM_API_KEY: z.string().optional(),
-  LLM_BASE_URL: z.string().optional(),
-  LLM_MODEL: z.string().default('gpt-3.5-turbo'),
+  LLM_BASE_URL: z.string().default('http://127.0.0.1:11434'),
+  LLM_MODEL: z.string().default('mistral'),
   LLM_MAX_TOKENS: z.string().transform(Number).default('1000'),
   LLM_TEMPERATURE: z.string().transform(Number).default('0.3'),
-  LLM_MOCK_IN_DEV: z.string().transform(Boolean).default('true'),
+  LLM_MOCK_IN_DEV: z.string().transform(Boolean).default('false'),
   
   // NewsAPI Configuration
   NEWSAPI_KEY: z.string().optional(),

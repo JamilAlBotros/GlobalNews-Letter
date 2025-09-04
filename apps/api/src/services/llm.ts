@@ -71,6 +71,11 @@ export class LLMService {
         'x-api-key': this.config.apiKey || '',
         'anthropic-version': '2023-06-01'
       };
+    } else if (this.config.provider === 'ollama') {
+      this.baseUrl = this.config.baseUrl || 'http://127.0.0.1:11434';
+      this.headers = {
+        'Content-Type': 'application/json'
+      };
     } else {
       throw new Error(`Unsupported LLM provider: ${this.config.provider}`);
     }
@@ -92,6 +97,8 @@ export class LLMService {
         return await this.translateWithOpenAI(request, startTime);
       } else if (this.config.provider === 'anthropic') {
         return await this.translateWithAnthropic(request, startTime);
+      } else if (this.config.provider === 'ollama') {
+        return await this.translateWithOllama(request, startTime);
       }
       
       throw new Error(`Provider ${this.config.provider} not implemented`);
@@ -116,6 +123,8 @@ export class LLMService {
         return await this.summarizeWithOpenAI(request, startTime);
       } else if (this.config.provider === 'anthropic') {
         return await this.summarizeWithAnthropic(request, startTime);
+      } else if (this.config.provider === 'ollama') {
+        return await this.summarizeWithOllama(request, startTime);
       }
       
       throw new Error(`Provider ${this.config.provider} not implemented`);
@@ -134,7 +143,11 @@ export class LLMService {
       return { language: lang, confidence: 0.9 };
     }
 
-    // Use LLM for language detection
+    if (this.config.provider === 'ollama') {
+      return await this.detectLanguageWithOllama(text);
+    }
+
+    // Use LLM for language detection (OpenAI/Anthropic)
     const prompt = `Detect the language of this text. Respond with only the ISO 639-1 code (en, es, pt, fr, ar, zh, ja):\n\n${text.slice(0, 500)}`;
     
     try {
@@ -303,6 +316,53 @@ export class LLMService {
     };
   }
 
+  private async translateWithOllama(request: TranslationRequest, startTime: number): Promise<TranslationResponse> {
+    const languageNames = this.getLanguageNames();
+    const sourceLang = languageNames[request.sourceLanguage];
+    const targetLang = languageNames[request.targetLanguage];
+
+    const prompt = `You are a professional translator. Translate the following ${sourceLang} text to ${targetLang}. 
+
+Requirements:
+- Maintain the original meaning and tone
+- Keep proper nouns and technical terms accurate
+- Preserve any formatting (if present)
+- Return ONLY the translated text, no explanations or additional text
+
+Text to translate:
+${request.text}`;
+
+    const response = await fetch(`${this.baseUrl}/api/generate`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: this.config.model,
+        prompt: prompt,
+        stream: false,
+        options: {
+          temperature: this.config.temperature,
+          num_predict: this.config.maxTokens
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Ollama API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const translatedText = data.response?.trim() || '';
+    
+    return {
+      translatedText,
+      qualityScore: this.calculateQualityScore(request.text, translatedText),
+      confidence: 0.85, // Slightly lower than commercial APIs
+      model: this.config.model,
+      processingTimeMs: Date.now() - startTime
+    };
+  }
+
   private async summarizeWithOpenAI(request: SummarizationRequest, startTime: number): Promise<SummarizationResponse> {
     const languageName = this.getLanguageNames()[request.language];
     const systemPrompt = `You are an expert at creating concise, informative summaries. Create a ${request.maxLength}-character summary in ${languageName}. ${request.style === 'bullet-points' ? 'Use bullet points.' : 'Use paragraph format.'}`;
@@ -345,6 +405,50 @@ export class LLMService {
 
     const data = await response.json();
     const summary = data.content[0]?.text?.trim() || '';
+    
+    return {
+      summary,
+      model: this.config.model,
+      processingTimeMs: Date.now() - startTime
+    };
+  }
+
+  private async summarizeWithOllama(request: SummarizationRequest, startTime: number): Promise<SummarizationResponse> {
+    const languageName = this.getLanguageNames()[request.language];
+    
+    const prompt = `You are an expert at creating concise, informative summaries. Create a summary of the following text in ${languageName}.
+
+Requirements:
+- Maximum length: ${request.maxLength} characters
+- Style: ${request.style === 'bullet-points' ? 'Use bullet points to list key information' : 'Write in paragraph format'}
+- Language: ${languageName}
+- Focus on the most important information
+- Return ONLY the summary, no explanations or additional text
+
+Text to summarize:
+${request.text}`;
+
+    const response = await fetch(`${this.baseUrl}/api/generate`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify({
+        model: this.config.model,
+        prompt: prompt,
+        stream: false,
+        options: {
+          temperature: this.config.temperature,
+          num_predict: Math.ceil(request.maxLength / 2) // Rough token estimate
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Ollama API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const summary = data.response?.trim() || '';
     
     return {
       summary,
@@ -410,6 +514,56 @@ export class LLMService {
       model: 'mock-summarizer',
       processingTimeMs: Date.now() - startTime
     };
+  }
+
+  private async detectLanguageWithOllama(text: string): Promise<{ language: SupportedLanguage; confidence: number }> {
+    const prompt = `You are a language detection expert. Analyze the following text and determine its language.
+
+Respond with ONLY the ISO 639-1 language code from this list:
+- en (English)
+- es (Spanish)  
+- pt (Portuguese)
+- fr (French)
+- ar (Arabic)
+- zh (Chinese)
+- ja (Japanese)
+
+Text to analyze:
+${text.slice(0, 500)}
+
+Language code:`;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({
+          model: this.config.model,
+          prompt: prompt,
+          stream: false,
+          options: {
+            temperature: 0.1, // Low temperature for consistent detection
+            num_predict: 5    // Short response expected
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const detected = data.response?.trim().toLowerCase() as SupportedLanguage;
+      const supported: SupportedLanguage[] = ['en', 'es', 'pt', 'fr', 'ar', 'zh', 'ja'];
+      
+      return {
+        language: supported.includes(detected) ? detected : this.simpleLanguageDetection(text),
+        confidence: supported.includes(detected) ? 0.85 : 0.6
+      };
+    } catch (error) {
+      // Fallback to simple detection
+      return { language: this.simpleLanguageDetection(text), confidence: 0.5 };
+    }
   }
 
   private simpleLanguageDetection(text: string): SupportedLanguage {

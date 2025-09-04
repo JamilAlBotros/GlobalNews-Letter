@@ -152,14 +152,16 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     // Convert target languages array to comma-separated string
     const targetLanguagesStr = input.target_languages.join(',');
     
-    // Estimate completion time (mock: 30 minutes from now)
-    const estimatedCompletion = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    // Calculate realistic completion time based on content length and target languages
+    const contentLength = (article.title + ' ' + (article.description || '') + ' ' + (article.content || '')).length;
+    const estimatedWordCount = Math.max(50, Math.floor(contentLength / 5)); // Rough words estimation
+    const processingTimePerWord = 0.1; // seconds per word
+    const totalProcessingTime = estimatedWordCount * processingTimePerWord * input.target_languages.length;
+    const estimatedCompletion = new Date(Date.now() + totalProcessingTime * 1000).toISOString();
     
-    // Mock word count estimation based on title length
-    const estimatedWordCount = Math.max(100, article.title.split(' ').length * 20);
-    
-    // Mock cost estimation ($0.05 per word)
-    const costEstimate = estimatedWordCount * 0.05;
+    // Calculate cost based on actual word count and number of target languages
+    const costPerWord = 0.02; // $0.02 per word per language
+    const costEstimate = estimatedWordCount * costPerWord * input.target_languages.length;
 
     await db.run(`
       INSERT INTO translation_jobs (

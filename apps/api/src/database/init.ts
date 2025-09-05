@@ -96,6 +96,19 @@ export async function initializeDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_translation_jobs_priority ON translation_jobs(priority);
   `);
 
+  // Add new columns for enhanced features
+  await db.exec(`
+    ALTER TABLE articles ADD COLUMN reading_time_minutes INTEGER DEFAULT NULL;
+  `).catch(() => {}); // Ignore if column already exists
+
+  await db.exec(`
+    ALTER TABLE articles ADD COLUMN is_bookmarked BOOLEAN DEFAULT FALSE;
+  `).catch(() => {}); // Ignore if column already exists
+
+  await db.exec(`
+    ALTER TABLE feeds ADD COLUMN feed_category VARCHAR(50) DEFAULT NULL;
+  `).catch(() => {}); // Ignore if column already exists
+
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_translation_jobs_created ON translation_jobs(created_at DESC);
   `);

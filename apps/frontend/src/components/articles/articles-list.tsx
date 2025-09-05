@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useState, useMemo } from 'react';
 import { 
@@ -45,6 +45,11 @@ export function ArticlesList() {
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [translations, setTranslations] = useState<Record<string, any>>({});
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
+
+  const queryClient = useQueryClient();
 
   const { data: articles, isLoading, error, refetch } = useQuery({
     queryKey: ['articles', selectedFeed],
@@ -60,6 +65,58 @@ export function ArticlesList() {
 
   const articlesData = articles || [];
   const feedsData = feeds || [];
+
+  // Article action mutations
+  const translateMutation = useMutation({
+    mutationFn: async ({ articleId, targetLanguage }: { articleId: string; targetLanguage: string }) => {
+      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_language: targetLanguage }),
+      });
+      if (!response.ok) throw new Error('Translation failed');
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      setTranslations(prev => ({ ...prev, [variables.articleId]: data }));
+      setActionLoading(null);
+    },
+    onError: () => setActionLoading(null),
+  });
+
+  const summarizeMutation = useMutation({
+    mutationFn: async (articleId: string) => {
+      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ style: 'concise' }),
+      });
+      if (!response.ok) throw new Error('Summarization failed');
+      return response.json();
+    },
+    onSuccess: (data, articleId) => {
+      setSummaries(prev => ({ ...prev, [articleId]: data.summary }));
+      setActionLoading(null);
+    },
+    onError: () => setActionLoading(null),
+  });
+
+  const bookmarkMutation = useMutation({
+    mutationFn: async ({ articleId, isBookmarked }: { articleId: string; isBookmarked: boolean }) => {
+      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/bookmark`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_bookmarked: isBookmarked }),
+      });
+      if (!response.ok) throw new Error('Bookmark update failed');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      setActionLoading(null);
+    },
+    onError: () => setActionLoading(null),
+  });
 
   // Filter and sort articles
   const filteredAndSortedArticles = useMemo(() => {
@@ -147,6 +204,25 @@ export function ArticlesList() {
       'ja': '日本語'
     };
     return languages[code] || code.toUpperCase();
+  };
+
+  // Article action handlers
+  const handleTranslate = (article: Article) => {
+    setActionLoading(article.id);
+    // For demo, translate to English if not English, otherwise to Spanish
+    const targetLanguage = article.detected_language === 'en' ? 'es' : 'en';
+    translateMutation.mutate({ articleId: article.id, targetLanguage });
+  };
+
+  const handleSummarize = (article: Article) => {
+    setActionLoading(article.id);
+    summarizeMutation.mutate(article.id);
+  };
+
+  const handleBookmark = (article: Article) => {
+    setActionLoading(article.id);
+    // Toggle bookmark status (assuming articles don't have is_bookmarked field yet)
+    bookmarkMutation.mutate({ articleId: article.id, isBookmarked: true });
   };
 
   if (isLoading) {
@@ -354,6 +430,9 @@ export function ArticlesList() {
                 key={article.id}
                 article={article}
                 onPreview={setPreviewArticle}
+                onTranslate={handleTranslate}
+                onSummarize={handleSummarize}
+                onBookmark={handleBookmark}
               />
             ) : (
               // List view - simplified card
@@ -427,6 +506,10 @@ export function ArticlesList() {
         article={previewArticle}
         isOpen={previewArticle !== null}
         onClose={() => setPreviewArticle(null)}
+        translation={previewArticle ? translations[previewArticle.id] : undefined}
+        summary={previewArticle ? summaries[previewArticle.id] : undefined}
+        onTranslate={handleTranslate}
+        onSummarize={handleSummarize}
       />
     </div>
   );

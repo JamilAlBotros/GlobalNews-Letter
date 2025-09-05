@@ -274,6 +274,35 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     return mapDatabaseFeedToFeed(feed);
   });
 
+  // Get feed details with additional metadata
+  app.get("/feeds/:id/details", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    
+    // Use repository method for finding feed by ID
+    const feed = await feedRepository.findById(id);
+    if (!feed) {
+      return reply.code(404).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Feed not found",
+        status: 404,
+        instance: request.url
+      });
+    }
+
+    // TODO: Add more metadata like article count, last update, etc.
+    const feedDetails = {
+      ...mapDatabaseFeedToFeed(feed),
+      metadata: {
+        total_articles: 0, // TODO: Count articles for this feed
+        last_poll: feed.updated_at,
+        health_status: 'active', // TODO: Implement health checking
+        average_articles_per_day: 0 // TODO: Calculate from historical data
+      }
+    };
+
+    return feedDetails;
+  });
+
   app.put("/feeds/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     const input = UpdateFeedInput.parse(request.body);

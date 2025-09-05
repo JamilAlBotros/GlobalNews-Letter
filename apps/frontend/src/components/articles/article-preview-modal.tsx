@@ -33,9 +33,13 @@ interface ArticlePreviewModalProps {
   article: Article | null;
   isOpen: boolean;
   onClose: () => void;
+  translation?: any;
+  summary?: string;
+  onTranslate?: (article: Article) => void;
+  onSummarize?: (article: Article) => void;
 }
 
-export function ArticlePreviewModal({ article, isOpen, onClose }: ArticlePreviewModalProps) {
+export function ArticlePreviewModal({ article, isOpen, onClose, translation, summary, onTranslate, onSummarize }: ArticlePreviewModalProps) {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [activeTab, setActiveTab] = useState<'content' | 'metadata'>('content');
 
@@ -148,13 +152,28 @@ export function ArticlePreviewModal({ article, isOpen, onClose }: ArticlePreview
               <span>{copiedUrl ? 'Copied!' : 'Copy URL'}</span>
             </button>
             
-            {/* TODO: Implement these actions when backend supports them */}
-            <button className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+            <button
+              onClick={() => onTranslate?.(article)}
+              className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                onTranslate 
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+              disabled={!onTranslate}
+            >
               <Language className="h-4 w-4" />
               <span>Translate</span>
             </button>
             
-            <button className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed">
+            <button
+              onClick={() => onSummarize?.(article)}
+              className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                onSummarize 
+                  ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+              disabled={!onSummarize}
+            >
               <Sparkles className="h-4 w-4" />
               <span>Summarize</span>
             </button>
@@ -216,16 +235,46 @@ export function ArticlePreviewModal({ article, isOpen, onClose }: ArticlePreview
                 </div>
               )}
 
-              {/* TODO: Show AI Summary when available */}
-              {/* {article.summary && (
+              {/* AI Summary */}
+              {(summary || article.summary) && (
                 <div className="bg-blue-50 border-l-4 border-blue-200 p-4 rounded-r-lg">
                   <div className="flex items-center space-x-2 mb-3">
                     <Sparkles className="h-5 w-5 text-blue-600" />
                     <h3 className="text-sm font-semibold text-blue-900">AI Summary</h3>
                   </div>
-                  <p className="text-blue-800 leading-relaxed">{article.summary}</p>
+                  <p className="text-blue-800 leading-relaxed">{summary || article.summary}</p>
                 </div>
-              )} */}
+              )}
+
+              {/* Translation */}
+              {translation && (
+                <div className="bg-green-50 border-l-4 border-green-200 p-4 rounded-r-lg">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Language className="h-5 w-5 text-green-600" />
+                    <h3 className="text-sm font-semibold text-green-900">
+                      Translation ({translation.target_language?.toUpperCase()})
+                    </h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="text-sm font-medium text-green-800">Title:</h4>
+                      <p className="text-green-700">{translation.translated_title}</p>
+                    </div>
+                    {translation.translated_description && (
+                      <div>
+                        <h4 className="text-sm font-medium text-green-800">Description:</h4>
+                        <p className="text-green-700">{translation.translated_description}</p>
+                      </div>
+                    )}
+                    {translation.translated_content && (
+                      <div>
+                        <h4 className="text-sm font-medium text-green-800">Content:</h4>
+                        <p className="text-green-700 line-clamp-3">{translation.translated_content}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Content */}
               {article.content && (

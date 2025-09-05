@@ -390,4 +390,51 @@ export class ArticleRepository extends BaseRepository {
       recentCount
     };
   }
+
+  /**
+   * Update bookmark status for an article
+   */
+  async updateBookmark(id: string, isBookmarked: boolean): Promise<boolean> {
+    const result = await this.executeCommand(
+      'update_article_bookmark',
+      'UPDATE articles SET is_bookmarked = $1 WHERE id = $2',
+      [isBookmarked ? 1 : 0, id]
+    );
+    return result.changes > 0;
+  }
+
+  /**
+   * Get all bookmarked articles
+   */
+  async findBookmarked(limit: number = 50, offset: number = 0): Promise<DatabaseArticle[]> {
+    return await this.executeQueryAll<DatabaseArticle>(
+      'find_bookmarked_articles',
+      'SELECT * FROM articles WHERE is_bookmarked = 1 ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+  }
+
+  /**
+   * Update reading time for an article
+   */
+  async updateReadingTime(id: string, readingTimeMinutes: number): Promise<boolean> {
+    const result = await this.executeCommand(
+      'update_article_reading_time',
+      'UPDATE articles SET reading_time_minutes = $1 WHERE id = $2',
+      [readingTimeMinutes, id]
+    );
+    return result.changes > 0;
+  }
+
+  /**
+   * Update summary for an article
+   */
+  async updateSummary(id: string, summary: string): Promise<boolean> {
+    const result = await this.executeCommand(
+      'update_article_summary',
+      'UPDATE articles SET summary = $1 WHERE id = $2',
+      [summary, id]
+    );
+    return result.changes > 0;
+  }
 }

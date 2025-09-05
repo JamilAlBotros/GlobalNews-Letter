@@ -36,13 +36,12 @@ interface Article {
 interface ArticleCardProps {
   article: Article;
   onPreview: (article: Article) => void;
-  // TODO: Add these handlers when functionality is implemented
-  // onTranslate?: (article: Article) => void;
-  // onSummarize?: (article: Article) => void;
-  // onBookmark?: (article: Article) => void;
+  onTranslate?: (article: Article) => void;
+  onSummarize?: (article: Article) => void;
+  onBookmark?: (article: Article) => void;
 }
 
-export function ArticleCard({ article, onPreview }: ArticleCardProps) {
+export function ArticleCard({ article, onPreview, onTranslate, onSummarize, onBookmark }: ArticleCardProps) {
   const [showActions, setShowActions] = useState(false);
 
   // Calculate estimated reading time (rough calculation: 200 words per minute)
@@ -143,22 +142,39 @@ export function ArticleCard({ article, onPreview }: ArticleCardProps) {
                     <span>Preview</span>
                   </button>
                   
-                  {/* TODO: Implement these actions */}
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-gray-400">
+                  <button 
+                    onClick={() => onTranslate?.(article)}
+                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 ${
+                      onTranslate ? 'text-gray-700 hover:text-blue-600' : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!onTranslate}
+                  >
                     <Language className="h-4 w-4" />
                     <span>Translate</span>
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-gray-400">
+                  <button 
+                    onClick={() => onSummarize?.(article)}
+                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 ${
+                      onSummarize ? 'text-gray-700 hover:text-blue-600' : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!onSummarize}
+                  >
                     <Sparkles className="h-4 w-4" />
                     <span>Summarize</span>
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-gray-400">
+                  <button 
+                    onClick={() => onBookmark?.(article)}
+                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 ${
+                      onBookmark ? 'text-gray-700 hover:text-blue-600' : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!onBookmark}
+                  >
                     <Bookmark className="h-4 w-4" />
                     <span>Bookmark</span>
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-gray-400">
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-gray-400 cursor-not-allowed">
                     <Share2 className="h-4 w-4" />
-                    <span>Share</span>
+                    <span>Share (Coming Soon)</span>
                   </button>
                 </div>
               )}

@@ -24,10 +24,16 @@ export class TestDatabase {
     process.env.DATABASE_URL = this.testDbPath;
 
     // Initialize test database with schema
-    const { initializeDatabase, getDatabase } = await import('../../database/init.js');
+    const { initializeDatabase } = await import('../../database/init.js');
+    const { getDatabase } = await import('../../database/connection.js');
+    
     await initializeDatabase();
     
     this.connection = getDatabase();
+    
+    if (!this.connection) {
+      throw new Error('Failed to initialize test database connection');
+    }
     
     // Insert test data
     await this.insertTestData();

@@ -11,6 +11,7 @@ import { pollingRoutes } from "./routes/polling.js";
 import { translationRoutes } from "./routes/translation.js";
 import { newsletterRoutes } from "./routes/newsletter.js";
 import { llmRoutes } from "./routes/llm.js";
+import { settingsRoutes } from "./routes/settings.js";
 import { pollingScheduler } from "./services/polling-scheduler.js";
 
 const app = Fastify({
@@ -107,6 +108,7 @@ await app.register(pollingRoutes);
 await app.register(translationRoutes);
 await app.register(newsletterRoutes);
 await app.register(llmRoutes);
+await app.register(settingsRoutes);
 
 const start = async (): Promise<void> => {
   try {

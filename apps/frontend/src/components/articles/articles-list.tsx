@@ -12,7 +12,7 @@ import {
   AlertCircle, 
   FileText,
   Calendar,
-  Language,
+  Languages,
   Globe,
   RefreshCw
 } from 'lucide-react';
@@ -31,6 +31,7 @@ interface Article {
   scraped_at: string;
   created_at: string;
   feed_id: string;
+  summary?: string;
 }
 
 type ViewMode = 'grid' | 'list';
@@ -187,7 +188,7 @@ export function ArticlesList() {
     const languages = new Set(
       articlesData
         .map(article => article.detected_language)
-        .filter(Boolean)
+        .filter((lang): lang is string => Boolean(lang))
     );
     return Array.from(languages).sort();
   }, [articlesData]);
@@ -340,8 +341,8 @@ export function ArticlesList() {
               {/* Language Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Language className="inline h-4 w-4 mr-1" />
-                  Language
+                  <Languages className="inline h-4 w-4 mr-1" />
+                  Languages
                 </label>
                 <select
                   value={selectedLanguage}

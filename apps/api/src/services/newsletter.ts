@@ -148,6 +148,36 @@ export class NewsletterService {
     return this.generateDynamicNewsletter(newsletterData, language);
   }
 
+  /**
+   * Generate a preview newsletter with sample data for testing
+   */
+  generatePreview(language: NewsletterLanguage = 'ltr'): string {
+    const sampleData: NewsletterData = {
+      title: 'Weekly Tech Update',
+      intro: 'Here are this week\'s top technology stories:',
+      articles: [
+        {
+          url: 'https://example.com/article1',
+          title: 'Breaking: New AI Development Revolutionizes Industry',
+          description: 'A groundbreaking artificial intelligence system has been announced...'
+        },
+        {
+          url: 'https://example.com/article2', 
+          title: 'Tech Giants Announce Major Partnership',
+          description: 'Leading technology companies have formed an alliance...'
+        },
+        {
+          url: 'https://example.com/article3',
+          title: 'Cybersecurity Alert: New Threats Identified',
+          description: 'Security researchers have discovered several new vulnerabilities...'
+        }
+      ],
+      footer: 'Stay informed with our weekly newsletter. Unsubscribe anytime.'
+    };
+
+    return this.generateDynamicNewsletter(sampleData, language);
+  }
+
   private getTemplatePath(language: NewsletterLanguage): string {
     const filename = language === 'rtl' ? 'rtl_template.mjml' : 'ltr_tempalte.mjml';
     return join(this.templateDir, filename);

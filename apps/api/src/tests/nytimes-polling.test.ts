@@ -30,16 +30,16 @@ beforeEach(async () => {
   await db.run("DELETE FROM feeds");
 });
 
-test("Guardian RSS feed polling creates articles in database", async () => {
-  // Create The Guardian world RSS feed
+test("NY Times RSS feed polling creates articles in database", async () => {
+  // Create The NY Times RSS feed
   const feedResponse = await app.inject({
     method: "POST",
     url: "/feeds",
     payload: {
-      name: "The Guardian World News",
-      url: "https://www.theguardian.com/world/rss",
+      name: "The New York Times Homepage",
+      url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
       language: "English",
-      region: "UK",
+      region: "US",
       category: "News",
       type: "News",
       is_active: true
@@ -85,7 +85,7 @@ test("Guardian RSS feed polling creates articles in database", async () => {
     id: expect.any(String),
     feed_id: feed.id,
     title: expect.any(String),
-    url: expect.stringContaining("theguardian.com"),
+    url: expect.stringContaining("nytimes.com"),
     detected_language: expect.any(String),
     published_at: expect.any(String),
     scraped_at: expect.any(String),
@@ -96,10 +96,10 @@ test("Guardian RSS feed polling creates articles in database", async () => {
   const supportedLanguages = ['english', 'spanish', 'arabic', 'portuguese', 'french', 'chinese', 'japanese'];
   expect(supportedLanguages).toContain(firstArticle.detected_language);
 
-  // Verify all articles belong to our Guardian feed
+  // Verify all articles belong to our NY Times feed
   afterBody.data.forEach((article: any) => {
     expect(article.feed_id).toBe(feed.id);
-    expect(article.url).toContain('theguardian.com');
+    expect(article.url).toContain('nytimes.com');
     expect(article.title).toBeTruthy();
   });
 
@@ -109,19 +109,19 @@ test("Guardian RSS feed polling creates articles in database", async () => {
     expect(typeof article.needs_manual_language_review).toBe('boolean');
   });
 
-  console.log(`✅ Successfully fetched ${afterBody.data.length} articles from The Guardian RSS feed`);
+  console.log(`✅ Successfully fetched ${afterBody.data.length} articles from The NY Times RSS feed`);
 }, 30000); // 30 second timeout for live RSS fetching
 
-test("Guardian RSS feed polling handles duplicate articles correctly", async () => {
-  // Create The Guardian world RSS feed
+test("NY Times RSS feed polling handles duplicate articles correctly", async () => {
+  // Create The NY Times RSS feed
   const feedResponse = await app.inject({
     method: "POST",
     url: "/feeds",
     payload: {
-      name: "The Guardian World News",
-      url: "https://www.theguardian.com/world/rss",
+      name: "The New York Times Homepage",
+      url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
       language: "English",
-      region: "UK", 
+      region: "US", 
       category: "News",
       type: "News",
       is_active: true
@@ -169,16 +169,16 @@ test("Guardian RSS feed polling handles duplicate articles correctly", async () 
   console.log(`✅ Duplicate handling works correctly - no duplicates added on second poll`);
 }, 30000);
 
-test("Guardian RSS feed polling detects English language correctly", async () => {
-  // Create The Guardian RSS feed 
+test("NY Times RSS feed polling detects English language correctly", async () => {
+  // Create The NY Times RSS feed 
   const feedResponse = await app.inject({
     method: "POST",
     url: "/feeds",
     payload: {
-      name: "The Guardian World News",
-      url: "https://www.theguardian.com/world/rss",
+      name: "The New York Times Homepage",
+      url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
       language: "English",
-      region: "UK",
+      region: "US",
       category: "News",
       type: "News",
       is_active: true
@@ -204,7 +204,7 @@ test("Guardian RSS feed polling detects English language correctly", async () =>
   
   expect(articlesBody.data.length).toBeGreaterThan(0);
 
-  // Most Guardian articles should be detected as English
+  // Most NY Times articles should be detected as English
   const englishArticles = articlesBody.data.filter((article: any) => 
     article.detected_language === 'english'
   );

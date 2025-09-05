@@ -101,7 +101,7 @@ export class ArticleRepository extends BaseRepository {
     }
 
     if (language) {
-      query += ` AND a.language = $${params.length + 1}`;
+      query += ` AND a.detected_language = $${params.length + 1}`;
       params.push(language);
     }
 
@@ -178,7 +178,7 @@ export class ArticleRepository extends BaseRepository {
     }
 
     if (language) {
-      query += ` AND a.language = $${params.length + 1}`;
+      query += ` AND a.detected_language = $${params.length + 1}`;
       params.push(language);
     }
 

@@ -691,6 +691,11 @@ async function fetchAndParseRSSFeed(feedUrl: string): Promise<Array<{
   try {
     const feed = await parser.parseURL(feedUrl);
     
+    if (!feed || !feed.items) {
+      console.warn(`Feed ${feedUrl} returned no items`);
+      return [];
+    }
+    
     return feed.items.map(item => ({
       title: item.title || 'Untitled',
       url: item.link || item.guid || '',
@@ -701,7 +706,12 @@ async function fetchAndParseRSSFeed(feedUrl: string): Promise<Array<{
       guid: item.guid
     }));
   } catch (error) {
-    throw new Error(`Failed to parse RSS feed ${feedUrl}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Log the error but don't throw - gracefully handle malformed feeds
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.warn(`Failed to parse RSS feed ${feedUrl}: ${errorMessage}`);
+    
+    // Return empty array instead of throwing - allows other feeds to continue processing
+    return [];
   }
 }
 

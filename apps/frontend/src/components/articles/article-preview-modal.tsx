@@ -5,7 +5,7 @@ import {
   ExternalLink, 
   Clock, 
   Globe, 
-  Language,
+  Languages,
   FileText,
   Sparkles,
   BookOpen,
@@ -27,6 +27,7 @@ interface Article {
   scraped_at: string;
   created_at: string;
   feed_id: string;
+  summary?: string;
 }
 
 interface ArticlePreviewModalProps {
@@ -108,7 +109,7 @@ export function ArticlePreviewModal({ article, isOpen, onClose, translation, sum
                 {article.detected_language && (
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                      <Language className="h-3 w-3" />
+                      <Languages className="h-3 w-3" />
                       <span>{getLanguageName(article.detected_language)}</span>
                     </div>
                     {article.needs_manual_language_review && (
@@ -161,7 +162,7 @@ export function ArticlePreviewModal({ article, isOpen, onClose, translation, sum
               }`}
               disabled={!onTranslate}
             >
-              <Language className="h-4 w-4" />
+              <Languages className="h-4 w-4" />
               <span>Translate</span>
             </button>
             
@@ -250,7 +251,7 @@ export function ArticlePreviewModal({ article, isOpen, onClose, translation, sum
               {translation && (
                 <div className="bg-green-50 border-l-4 border-green-200 p-4 rounded-r-lg">
                   <div className="flex items-center space-x-2 mb-3">
-                    <Language className="h-5 w-5 text-green-600" />
+                    <Languages className="h-5 w-5 text-green-600" />
                     <h3 className="text-sm font-semibold text-green-900">
                       Translation ({translation.target_language?.toUpperCase()})
                     </h3>

@@ -26,6 +26,24 @@ const GenerateFromArticlesInput = z.object({
 
 
 export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
+  // Generate preview newsletter with sample data
+  app.post("/newsletter/preview", async (request, reply) => {
+    const { language } = request.body as { language?: 'ltr' | 'rtl' };
+    
+    try {
+      const html = newsletterService.generatePreview(language || 'ltr');
+
+      return reply
+        .header('Content-Type', 'text/html')
+        .send(html);
+    } catch (error) {
+      throw Object.assign(new Error("Failed to generate preview newsletter"), {
+        status: 500,
+        detail: (error as Error).message
+      });
+    }
+  });
+
   // Generate newsletter from custom data
   app.post("/newsletter/generate", async (request, reply) => {
     const body = GenerateNewsletterInput.parse(request.body);

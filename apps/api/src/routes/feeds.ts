@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 import { Feed, CreateFeedInput, UpdateFeedInput } from "../schemas/feed.js";
 import { PaginationQuery } from "../schemas/common.js";
 import { feedRepository } from "../repositories/index.js";

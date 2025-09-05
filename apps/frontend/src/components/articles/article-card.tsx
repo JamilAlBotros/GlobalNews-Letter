@@ -5,7 +5,7 @@ import {
   Globe, 
   ExternalLink, 
   FileText, 
-  Language,
+  Languages,
   Sparkles,
   Eye,
   Bookmark,
@@ -29,7 +29,7 @@ interface Article {
   // TODO: Add these fields when backend supports them
   // feed_name?: string;
   // feed_category?: string;
-  // summary?: string;
+  summary?: string;
   // reading_time_minutes?: number;
 }
 
@@ -108,7 +108,7 @@ export function ArticleCard({ article, onPreview, onTranslate, onSummarize, onBo
           <div className="flex items-center space-x-2">
             {article.detected_language && (
               <div className="flex items-center space-x-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                <Language className="h-3 w-3" />
+                <Languages className="h-3 w-3" />
                 <span>{getLanguageName(article.detected_language)}</span>
                 {article.needs_manual_language_review && (
                   <div className="w-1 h-1 bg-amber-400 rounded-full" title="Needs manual review" />
@@ -149,7 +149,7 @@ export function ArticleCard({ article, onPreview, onTranslate, onSummarize, onBo
                     }`}
                     disabled={!onTranslate}
                   >
-                    <Language className="h-4 w-4" />
+                    <Languages className="h-4 w-4" />
                     <span>Translate</span>
                   </button>
                   <button 

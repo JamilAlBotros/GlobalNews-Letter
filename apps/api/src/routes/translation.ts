@@ -132,8 +132,8 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     const input = CreateTranslationJobInput.parse(request.body);
     
     // Check if article exists
-    const article = await db.get<{ id: string; title: string }>(
-      "SELECT id, title FROM articles WHERE id = $1",
+    const article = await db.get<{ id: string; title: string; description: string | null; content: string | null }>(
+      "SELECT id, title, description, content FROM articles WHERE id = $1",
       input.article_id
     );
 

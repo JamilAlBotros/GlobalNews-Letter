@@ -322,20 +322,33 @@ export function PollingJobsManager() {
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="h-4 w-4 mr-2" />
-                      Last: {formatLastRun(job.last_run_at)}
+                      Last: {formatLastRun(job.last_run_time)}
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Filter className="h-4 w-4 mr-2" />
                       {job.feed_filters.categories?.length || 0} filters
                     </div>
                     <div className="flex items-center text-sm">
-                      {job.last_run_success ? (
+                      {job.total_runs > 0 && job.failed_runs === 0 ? (
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                      ) : (
+                      ) : job.total_runs > 0 ? (
                         <XCircle className="h-4 w-4 text-red-500 mr-2" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-gray-400 mr-2" />
                       )}
-                      <span className={job.last_run_success ? 'text-green-600' : 'text-red-600'}>
-                        {job.last_run_success ? 'Success' : 'Failed'}
+                      <span className={
+                        job.total_runs > 0 && job.failed_runs === 0 
+                          ? 'text-green-600' 
+                          : job.total_runs > 0 
+                            ? 'text-red-600' 
+                            : 'text-gray-500'
+                      }>
+                        {job.total_runs > 0 && job.failed_runs === 0 
+                          ? 'Success' 
+                          : job.total_runs > 0 
+                            ? 'Failed' 
+                            : 'Never run'
+                        }
                       </span>
                     </div>
                   </div>

@@ -1,3 +1,5 @@
+import { StatsOverview } from '@/components/dashboard/stats-overview';
+import { PollingStatus } from '@/components/dashboard/polling-status';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 
 export default function DashboardPage() {
@@ -5,12 +7,18 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <div className="text-sm text-gray-500">
+          Real-time overview of your news aggregation system
+        </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-600">Dashboard metrics will be available once the API endpoints are implemented.</p>
-      </div>
+      {/* Statistics Overview */}
+      <StatsOverview />
       
+      {/* Polling Status */}
+      <PollingStatus />
+      
+      {/* Recent Activity */}
       <RecentActivity />
     </div>
   );

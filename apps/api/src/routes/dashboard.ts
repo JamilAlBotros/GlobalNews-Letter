@@ -13,11 +13,11 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
           f.category,
           COUNT(DISTINCT f.id) as active_feeds,
           COUNT(a.id) as total_articles,
-          COUNT(CASE WHEN a.created_at >= datetime('now', '-24 hours') THEN 1 END) as articles_last_24h,
-          COUNT(CASE WHEN a.created_at >= datetime('now', '-7 days') THEN 1 END) as articles_last_7d
+          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
+          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d
         FROM feeds f
         LEFT JOIN articles a ON f.id = a.feed_id
-        WHERE f.is_active = 1
+        WHERE f.is_active = true
         GROUP BY f.category
         ORDER BY total_articles DESC
       `);
@@ -28,11 +28,11 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
           f.language,
           COUNT(DISTINCT f.id) as active_feeds,
           COUNT(a.id) as total_articles,
-          COUNT(CASE WHEN a.created_at >= datetime('now', '-24 hours') THEN 1 END) as articles_last_24h,
-          COUNT(CASE WHEN a.created_at >= datetime('now', '-7 days') THEN 1 END) as articles_last_7d
+          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
+          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d
         FROM feeds f
         LEFT JOIN articles a ON f.id = a.feed_id
-        WHERE f.is_active = 1
+        WHERE f.is_active = true
         GROUP BY f.language
         ORDER BY total_articles DESC
       `);
@@ -42,12 +42,12 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
         SELECT 
           COUNT(DISTINCT f.id) as total_active_feeds,
           COUNT(a.id) as total_articles,
-          COUNT(CASE WHEN a.created_at >= datetime('now', '-24 hours') THEN 1 END) as articles_last_24h,
-          COUNT(CASE WHEN a.created_at >= datetime('now', '-7 days') THEN 1 END) as articles_last_7d,
+          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
+          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d,
           MAX(a.created_at) as last_article_time
         FROM feeds f
         LEFT JOIN articles a ON f.id = a.feed_id
-        WHERE f.is_active = 1
+        WHERE f.is_active = true
       `);
 
       // Get recent polling activity (mock data for now - would come from polling service)
@@ -110,7 +110,7 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
       const activeFeeds = await db.all(`
         SELECT id, name, url, category, language, updated_at
         FROM feeds 
-        WHERE is_active = 1 
+        WHERE is_active = true 
         ORDER BY updated_at DESC
         LIMIT 10
       `);

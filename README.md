@@ -159,10 +159,29 @@ GlobalNews Letter/
 # From root - runs tests for all workspaces
 npm run test
 
+# Run tests with output saved to date-named files
+npm run test:file
+
 # Or run tests individually
 cd apps/api && npm test
-cd apps/frontend && npm test
+
+# Run API tests with file output
+cd apps/api && npm run test:file
+
+# Docker testing with file output
+npm run docker:test:file
 ```
+
+### Test Output Files
+Tests can be run with output automatically saved to timestamped files:
+- Individual test output: `apps/api/test-output/test-results-YYYY-MM-DD-HH-MM-SS.txt`
+- All workspace tests: `test-output/all-tests-YYYY-MM-DD-HH-MM-SS.txt`
+
+### Test Database Isolation
+All tests use isolated test databases with automatic cleanup:
+- Each test run creates a unique temporary database
+- Mock data is used instead of persisting real data
+- Databases are automatically cleaned up after tests complete
 
 ### API Testing with curl
 

@@ -1,28 +1,30 @@
 import { test, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import Fastify, { FastifyInstance } from "fastify";
 import { feedRoutes } from "../routes/feeds.js";
-import { getDatabase, closeDatabase, resetDatabase } from "../database/connection.js";
-import { initializeDatabase } from "../database/init.js";
+import { TestDatabase } from "./setup/test-database.js";
 
 let app: FastifyInstance;
+let testDb: TestDatabase;
 
 beforeAll(async () => {
-  process.env.NODE_ENV = 'test';
-  await resetDatabase(); // Ensure clean database state
+  // Setup test database
+  testDb = new TestDatabase();
+  await testDb.setup();
   
   app = Fastify();
   await app.register(feedRoutes);
-  await initializeDatabase();
 });
 
 afterAll(async () => {
+  await testDb.cleanup();
   await app.close();
-  await closeDatabase();
 });
 
 beforeEach(async () => {
-  const db = getDatabase();
-  await db.run("DELETE FROM feeds");
+  const db = testDb.getConnection();
+  if (db) {
+    await db.run("DELETE FROM feeds");
+  }
 });
 
 test("GET /feeds returns empty array when no feeds", async () => {

@@ -359,6 +359,42 @@ export class FeedRepository extends BaseRepository {
   }
 
   /**
+   * Batch create multiple feeds
+   */
+  async batchCreate(feeds: CreateFeedData[]): Promise<{ success: number; errors: Array<{ index: number; url: string; error: string }> }> {
+    const errors: Array<{ index: number; url: string; error: string }> = [];
+    let success = 0;
+
+    for (let i = 0; i < feeds.length; i++) {
+      const feed = feeds[i];
+      try {
+        // Check if feed already exists
+        const existing = await this.findByUrl(feed.url);
+        if (existing) {
+          errors.push({
+            index: i,
+            url: feed.url,
+            error: 'Feed with this URL already exists'
+          });
+          continue;
+        }
+
+        // Create the feed
+        await this.create(feed);
+        success++;
+      } catch (error) {
+        errors.push({
+          index: i,
+          url: feed.url,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return { success, errors };
+  }
+
+  /**
    * Batch update multiple feeds
    */
   async batchUpdate(updates: Array<{ id: string; data: UpdateFeedData }>): Promise<number> {

@@ -207,6 +207,56 @@ export async function feedRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // Batch create feeds from CSV data
+  app.post("/feeds/batch", async (request, reply) => {
+    try {
+      const input = z.array(z.object({
+        name: z.string(),
+        url: z.string().url(),
+        language: z.string(),
+        region: z.string(),
+        category: z.string(), 
+        type: z.string(),
+        description: z.string().optional()
+      })).parse(request.body);
+
+      const feedsToCreate = input.map(feed => ({
+        id: uuidv4(),
+        name: feed.name,
+        url: feed.url,
+        language: feed.language,
+        region: feed.region,
+        category: feed.category,
+        type: feed.type,
+        description: feed.description || null,
+        isActive: true,
+        created_at: new Date().toISOString()
+      }));
+
+      const result = await feedRepository.batchCreate(feedsToCreate);
+
+      return reply.code(201).send({
+        message: `Batch feed creation completed`,
+        summary: {
+          total_processed: input.length,
+          successful: result.success,
+          failed: result.errors.length
+        },
+        errors: result.errors
+      });
+
+    } catch (error: any) {
+      console.error('Batch feed creation error:', error);
+      return reply.code(400).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Batch feed creation failed",
+        status: 400,
+        detail: error?.message || 'Invalid request format',
+        instance: request.url
+      });
+    }
+  });
+
   app.get("/feeds/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     

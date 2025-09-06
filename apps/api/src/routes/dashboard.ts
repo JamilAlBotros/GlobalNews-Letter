@@ -13,8 +13,8 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
           f.category,
           COUNT(DISTINCT f.id) as active_feeds,
           COUNT(a.id) as total_articles,
-          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
-          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d
+          COUNT(CASE WHEN a.created_at::timestamp >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
+          COUNT(CASE WHEN a.created_at::timestamp >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d
         FROM feeds f
         LEFT JOIN articles a ON f.id = a.feed_id
         WHERE f.is_active = true
@@ -28,8 +28,8 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
           f.language,
           COUNT(DISTINCT f.id) as active_feeds,
           COUNT(a.id) as total_articles,
-          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
-          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d
+          COUNT(CASE WHEN a.created_at::timestamp >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
+          COUNT(CASE WHEN a.created_at::timestamp >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d
         FROM feeds f
         LEFT JOIN articles a ON f.id = a.feed_id
         WHERE f.is_active = true
@@ -42,50 +42,18 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
         SELECT 
           COUNT(DISTINCT f.id) as total_active_feeds,
           COUNT(a.id) as total_articles,
-          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
-          COUNT(CASE WHEN a.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d,
-          MAX(a.created_at) as last_article_time
+          COUNT(CASE WHEN a.created_at::timestamp >= NOW() - INTERVAL '24 hours' THEN 1 END) as articles_last_24h,
+          COUNT(CASE WHEN a.created_at::timestamp >= NOW() - INTERVAL '7 days' THEN 1 END) as articles_last_7d,
+          MAX(a.created_at::timestamp) as last_article_time
         FROM feeds f
         LEFT JOIN articles a ON f.id = a.feed_id
         WHERE f.is_active = true
       `);
 
-      // Get recent polling activity (mock data for now - would come from polling service)
-      const pollingJobs = {
-        active: 3,
-        completed_today: 45,
-        failed_today: 2,
-        next_scheduled: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes from now
-        last_successful: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
-        jobs: [
-          {
-            id: 'cnn-tech',
-            feed_name: 'CNN Technology',
-            status: 'running',
-            started_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-            articles_found: 5
-          },
-          {
-            id: 'bbc-world',
-            feed_name: 'BBC World News',
-            status: 'completed',
-            completed_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-            articles_found: 12
-          },
-          {
-            id: 'reuters-business',
-            feed_name: 'Reuters Business',
-            status: 'scheduled',
-            scheduled_at: new Date(Date.now() + 8 * 60 * 1000).toISOString()
-          }
-        ]
-      };
-
       return {
         overall: overallStats,
         by_category: categoryStats,
         by_language: languageStats,
-        polling_jobs: pollingJobs,
         last_updated: new Date().toISOString()
       };
     } catch (error) {
@@ -100,11 +68,9 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  // Get real-time polling status (would integrate with actual polling service)
+  // Get real-time polling status
   app.get('/dashboard/polling-status', async (request, reply) => {
     try {
-      // This would typically query your polling service/job queue
-      // For now, returning mock data based on database state
       const db = getDatabase();
       
       const activeFeeds = await db.all(`
@@ -118,9 +84,6 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
       return {
         status: 'healthy',
         active_feeds_count: activeFeeds.length,
-        polling_interval: '15 minutes',
-        last_poll_cycle: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-        next_poll_cycle: new Date(Date.now() + 7 * 60 * 1000).toISOString(),
         recent_activity: activeFeeds.map(feed => ({
           feed_id: feed.id,
           feed_name: feed.name,

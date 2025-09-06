@@ -2,32 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  Play, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
   RefreshCw,
   Activity,
-  Pause
+  AlertCircle
 } from 'lucide-react';
-
-interface PollingJob {
-  id: string;
-  feed_name: string;
-  status: 'running' | 'completed' | 'scheduled' | 'failed';
-  started_at?: string;
-  completed_at?: string;
-  scheduled_at?: string;
-  articles_found?: number;
-  error_message?: string;
-}
 
 interface PollingStatus {
   status: string;
   active_feeds_count: number;
-  polling_interval: string;
-  last_poll_cycle: string;
-  next_poll_cycle: string;
   recent_activity: Array<{
     feed_id: string;
     feed_name: string;
@@ -39,14 +21,28 @@ interface PollingStatus {
 }
 
 interface PollingData {
-  polling_jobs: {
-    active: number;
-    completed_today: number;
-    failed_today: number;
-    next_scheduled: string;
-    last_successful: string;
-    jobs: PollingJob[];
+  overall: {
+    total_active_feeds: number;
+    total_articles: number;
+    articles_last_24h: number;
+    articles_last_7d: number;
+    last_article_time: string | null;
   };
+  by_category: Array<{
+    category: string;
+    active_feeds: number;
+    total_articles: number;
+    articles_last_24h: number;
+    articles_last_7d: number;
+  }>;
+  by_language: Array<{
+    language: string;
+    active_feeds: number;
+    total_articles: number;
+    articles_last_24h: number;
+    articles_last_7d: number;
+  }>;
+  last_updated: string;
 }
 
 export function PollingStatus() {
@@ -94,36 +90,6 @@ export function PollingStatus() {
     return new Date(dateString).toLocaleTimeString();
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'running':
-        return <Play className="h-4 w-4 text-blue-500 animate-pulse" />;
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'scheduled':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    switch (status) {
-      case 'running':
-        return `${baseClasses} bg-blue-100 text-blue-800`;
-      case 'completed':
-        return `${baseClasses} bg-green-100 text-green-800`;
-      case 'scheduled':
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case 'failed':
-        return `${baseClasses} bg-red-100 text-red-800`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
 
   if (loading && !pollingData) {
     return (
@@ -185,64 +151,42 @@ export function PollingStatus() {
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{pollingData.polling_jobs.active}</div>
-            <div className="text-xs text-gray-500">Active Now</div>
+            <div className="text-2xl font-bold text-blue-600">{pollingStatus?.active_feeds_count || 0}</div>
+            <div className="text-xs text-gray-500">Active Feeds</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{pollingData.polling_jobs.completed_today}</div>
-            <div className="text-xs text-gray-500">Completed Today</div>
+            <div className="text-2xl font-bold text-green-600">{pollingData.overall.total_articles}</div>
+            <div className="text-xs text-gray-500">Total Articles</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{pollingData.polling_jobs.failed_today}</div>
-            <div className="text-xs text-gray-500">Failed Today</div>
+            <div className="text-2xl font-bold text-yellow-600">{pollingData.overall.articles_last_24h}</div>
+            <div className="text-xs text-gray-500">Last 24h</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{pollingStatus.active_feeds_count}</div>
-            <div className="text-xs text-gray-500">Total Feeds</div>
+            <div className="text-2xl font-bold text-purple-600">{pollingData.overall.articles_last_7d}</div>
+            <div className="text-xs text-gray-500">Last 7 days</div>
           </div>
         </div>
 
         {/* Polling Schedule Info */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium text-gray-700">Interval:</span>
-              <span className="ml-2 text-gray-600">{pollingStatus.polling_interval}</span>
+              <span className="font-medium text-gray-700">Status:</span>
+              <span className="ml-2 text-gray-600 capitalize">{pollingStatus?.status || 'Unknown'}</span>
             </div>
             <div>
-              <span className="font-medium text-gray-700">Last Run:</span>
-              <span className="ml-2 text-gray-600">{formatTime(pollingStatus.last_poll_cycle)}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Next Run:</span>
-              <span className="ml-2 text-gray-600">{formatTime(pollingStatus.next_poll_cycle)}</span>
+              <span className="font-medium text-gray-700">Last Updated:</span>
+              <span className="ml-2 text-gray-600">{formatTime(pollingData.last_updated)}</span>
             </div>
           </div>
         </div>
 
-        {/* Current Jobs */}
-        {pollingData.polling_jobs.jobs.length > 0 && (
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">Current Jobs</h4>
-            <div className="space-y-3">
-              {pollingData.polling_jobs.jobs.map((job) => (
-                <div key={job.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    {getStatusIcon(job.status)}
-                    <div>
-                      <div className="font-medium text-gray-900">{job.feed_name}</div>
-                      <div className="text-xs text-gray-500">
-                        {job.status === 'running' && job.started_at && `Started ${formatTime(job.started_at)}`}
-                        {job.status === 'completed' && job.completed_at && `Completed ${formatTime(job.completed_at)}`}
-                        {job.status === 'scheduled' && job.scheduled_at && `Scheduled ${formatTime(job.scheduled_at)}`}
-                        {job.articles_found !== undefined && ` • ${job.articles_found} articles found`}
-                      </div>
-                    </div>
-                  </div>
-                  <span className={getStatusBadge(job.status)}>{job.status}</span>
-                </div>
-              ))}
-            </div>
+        {/* Feed Activity Section (replaces jobs) */}
+        {pollingStatus?.recent_activity && pollingStatus.recent_activity.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No active feeds configured yet.</p>
+            <p className="text-sm mt-1">Add some RSS feeds to start polling for articles.</p>
           </div>
         )}
 

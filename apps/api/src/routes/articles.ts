@@ -265,17 +265,13 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      // TODO: Integrate with LLM service for translation
-      // For now, return a mock response
-      return reply.code(200).send({
-        article_id: id,
-        target_language,
-        translated_title: `[${target_language.toUpperCase()}] ${article.title}`,
-        translated_description: article.description ? `[${target_language.toUpperCase()}] ${article.description}` : null,
-        translated_content: article.content ? `[${target_language.toUpperCase()}] ${article.content}` : null,
-        translation_status: 'completed',
-        confidence: 0.95,
-        timestamp: new Date().toISOString()
+      // Translation service not yet implemented
+      return reply.code(501).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Translation service not implemented",
+        status: 501,
+        detail: "Article translation functionality is not yet available",
+        instance: request.url
       });
     } catch (error) {
       console.error('Translation error:', error);
@@ -315,21 +311,13 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      // TODO: Integrate with LLM service for summarization
-      // For now, return a mock response
-      const contentToSummarize = article.content || article.description || '';
-      const mockSummary = contentToSummarize.length > 200 
-        ? contentToSummarize.substring(0, 200) + '...'
-        : contentToSummarize;
-
-      return reply.code(200).send({
-        article_id: id,
-        summary: mockSummary,
-        style,
-        word_count: mockSummary.split(' ').length,
-        original_word_count: contentToSummarize.split(' ').length,
-        compression_ratio: 0.3,
-        timestamp: new Date().toISOString()
+      // Summarization service not yet implemented
+      return reply.code(501).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Summarization service not implemented",
+        status: 501,
+        detail: "Article summarization functionality is not yet available",
+        instance: request.url
       });
     } catch (error) {
       console.error('Summarization error:', error);

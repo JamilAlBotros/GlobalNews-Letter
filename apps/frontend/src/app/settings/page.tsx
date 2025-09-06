@@ -29,6 +29,8 @@ interface PollingSettings {
   batchSize: number;
   maxRetries: number;
   timeoutMs: number;
+  maxConcurrentJobs: number;
+  checkIntervalMs: number;
   status?: string;
   lastRun?: string;
   nextRun?: string;
@@ -524,6 +526,39 @@ export default function SettingsPage() {
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">Between 5 seconds and 5 minutes</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Concurrent Jobs</label>
+                  <input
+                    type="number"
+                    value={settings.polling.maxConcurrentJobs}
+                    onChange={(e) => {
+                      const newSettings = { ...settings.polling, maxConcurrentJobs: parseInt(e.target.value) };
+                      setSettings({ ...settings, polling: newSettings });
+                    }}
+                    min="1"
+                    max="50"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Number of feeds processed simultaneously (1-50)</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Check Interval (ms)</label>
+                  <input
+                    type="number"
+                    value={settings.polling.checkIntervalMs}
+                    onChange={(e) => {
+                      const newSettings = { ...settings.polling, checkIntervalMs: parseInt(e.target.value) };
+                      setSettings({ ...settings, polling: newSettings });
+                    }}
+                    min="5000"
+                    max="300000"
+                    step="1000"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How often to check for new jobs (5 seconds to 5 minutes)</p>
                 </div>
               </div>
 

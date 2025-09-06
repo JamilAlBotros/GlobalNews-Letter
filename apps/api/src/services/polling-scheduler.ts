@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 export class PollingScheduler {
   private isRunning = false;
   private checkInterval: NodeJS.Timeout | null = null;
-  private readonly CHECK_INTERVAL_MS = 30000; // Check every 30 seconds
-  private readonly MAX_CONCURRENT_JOBS = 3; // Limit concurrent job execution
+  private CHECK_INTERVAL_MS = 30000; // Default: Check every 30 seconds
+  private MAX_CONCURRENT_JOBS = 3; // Default: Limit concurrent job execution
   private activeJobs = new Set<string>();
 
   constructor() {
@@ -14,6 +14,38 @@ export class PollingScheduler {
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
     this.checkAndExecuteJobs = this.checkAndExecuteJobs.bind(this);
+    this.updateConfiguration = this.updateConfiguration.bind(this);
+  }
+
+  // Update polling configuration
+  updateConfiguration(config: { maxConcurrentJobs?: number; checkIntervalMs?: number }): void {
+    const wasRunning = this.isRunning;
+    
+    if (config.maxConcurrentJobs !== undefined) {
+      this.MAX_CONCURRENT_JOBS = config.maxConcurrentJobs;
+      console.log(`Updated MAX_CONCURRENT_JOBS to ${this.MAX_CONCURRENT_JOBS}`);
+    }
+    
+    if (config.checkIntervalMs !== undefined) {
+      this.CHECK_INTERVAL_MS = config.checkIntervalMs;
+      console.log(`Updated CHECK_INTERVAL_MS to ${this.CHECK_INTERVAL_MS}ms`);
+      
+      // If running and interval changed, restart to apply new interval
+      if (wasRunning) {
+        this.stop().then(() => {
+          this.start();
+        });
+      }
+    }
+  }
+
+  // Get current configuration
+  getConfiguration(): { maxConcurrentJobs: number; checkIntervalMs: number; isRunning: boolean } {
+    return {
+      maxConcurrentJobs: this.MAX_CONCURRENT_JOBS,
+      checkIntervalMs: this.CHECK_INTERVAL_MS,
+      isRunning: this.isRunning
+    };
   }
 
   async start(): Promise<void> {

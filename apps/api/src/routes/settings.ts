@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { serverConfig, databaseConfig, llmConfig, newsApiConfig } from "../config/environment.js";
+import { pollingScheduler } from "../services/polling-scheduler.js";
 
 // Zod schemas for validation
 const SystemSettingsSchema = z.object({
@@ -30,7 +31,9 @@ const PollingSettingsSchema = z.object({
   defaultInterval: z.number().min(60).max(86400), // 1 minute to 24 hours
   batchSize: z.number().min(1).max(100),
   maxRetries: z.number().min(0).max(10),
-  timeoutMs: z.number().min(5000).max(300000) // 5 seconds to 5 minutes
+  timeoutMs: z.number().min(5000).max(300000), // 5 seconds to 5 minutes
+  maxConcurrentJobs: z.number().min(1).max(50), // 1 to 50 concurrent jobs
+  checkIntervalMs: z.number().min(5000).max(300000) // 5 seconds to 5 minutes
 });
 
 const NewsletterSettingsSchema = z.object({
@@ -48,6 +51,8 @@ let runtimeSettings: {
     batchSize: number;
     maxRetries: number;
     timeoutMs: number;
+    maxConcurrentJobs: number;
+    checkIntervalMs: number;
   };
   newsletter: {
     frequency: 'daily' | 'weekly' | 'monthly';
@@ -61,7 +66,9 @@ let runtimeSettings: {
     defaultInterval: 3600, // 1 hour
     batchSize: 10,
     maxRetries: 3,
-    timeoutMs: 30000
+    timeoutMs: 30000,
+    maxConcurrentJobs: 3, // Current default
+    checkIntervalMs: 30000 // Current default (30 seconds)
   },
   newsletter: {
     frequency: 'daily',
@@ -183,10 +190,19 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         ...runtimeSettings.polling,
         ...input
       };
+
+      // Update polling scheduler configuration if relevant settings changed
+      if (input.maxConcurrentJobs !== undefined || input.checkIntervalMs !== undefined) {
+        pollingScheduler.updateConfiguration({
+          maxConcurrentJobs: input.maxConcurrentJobs,
+          checkIntervalMs: input.checkIntervalMs
+        });
+      }
       
       return {
         message: "Polling settings updated successfully",
-        settings: runtimeSettings.polling
+        settings: runtimeSettings.polling,
+        scheduler: pollingScheduler.getConfiguration()
       };
     } catch (error: any) {
       return reply.code(400).type("application/problem+json").send({
@@ -279,7 +295,9 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         defaultInterval: 3600,
         batchSize: 10,
         maxRetries: 3,
-        timeoutMs: 30000
+        timeoutMs: 30000,
+        maxConcurrentJobs: 3,
+        checkIntervalMs: 30000
       };
     } else if (section === 'newsletter') {
       runtimeSettings.newsletter = {
@@ -296,7 +314,9 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
           defaultInterval: 3600,
           batchSize: 10,
           maxRetries: 3,
-          timeoutMs: 30000
+          timeoutMs: 30000,
+          maxConcurrentJobs: 3,
+          checkIntervalMs: 30000
         },
         newsletter: {
           frequency: 'daily',

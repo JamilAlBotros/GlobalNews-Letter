@@ -185,6 +185,39 @@ export async function initializeDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_newsletter_translation_created ON newsletter_translation_jobs(created_at DESC);
   `);
 
+  // Google RSS feeds table - separate from regular feeds
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS google_rss_feeds (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL UNIQUE,
+      mode TEXT NOT NULL CHECK (mode IN ('topic', 'search')),
+      topic TEXT,
+      search_query TEXT,
+      time_frame TEXT,
+      country TEXT NOT NULL,
+      language TEXT NOT NULL,
+      is_active BOOLEAN DEFAULT TRUE,
+      is_validated BOOLEAN DEFAULT FALSE,
+      last_scraped TEXT,
+      article_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_google_rss_active ON google_rss_feeds(is_active);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_google_rss_mode ON google_rss_feeds(mode);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_google_rss_created ON google_rss_feeds(created_at DESC);
+  `);
+
   console.log("Database initialized successfully");
 }
 

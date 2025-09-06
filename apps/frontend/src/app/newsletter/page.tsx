@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ExternalLink, Calendar, Filter, Mail, Download, CheckSquare, Square } from 'lucide-react';
+import { Search, ExternalLink, Calendar, Filter, Mail, Download, CheckSquare, Square, Copy, Eye, FileText } from 'lucide-react';
 
 interface Article {
   id: string;
@@ -40,6 +40,10 @@ export default function NewsletterPage() {
   const [newsletterTitle, setNewsletterTitle] = useState('Weekly News Digest');
   const [newsletterIntro, setNewsletterIntro] = useState('Here are the top stories from this week:');
   const [newsletterFooter, setNewsletterFooter] = useState('Thank you for reading!');
+  
+  // Preview state
+  const [showPreview, setShowPreview] = useState(true);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Fetch articles from database
   const fetchArticles = async (page: number = 1, search: string = '', feed: string = '') => {
@@ -178,6 +182,85 @@ export default function NewsletterPage() {
     }
   };
 
+  // Get selected articles for preview
+  const getSelectedArticles = () => {
+    return articles.filter(article => selectedArticles.has(article.id));
+  };
+
+  // Generate preview content
+  const generatePreviewContent = () => {
+    const selectedArticlesList = getSelectedArticles();
+    if (selectedArticlesList.length === 0) return '';
+    
+    let content = `${newsletterTitle}\n\n${newsletterIntro}\n\n`;
+    
+    selectedArticlesList.forEach((article, index) => {
+      content += `${index + 1}. ${article.title}\n`;
+      if (article.description) {
+        content += `${article.description}\n`;
+      }
+      content += `Read more: ${article.url}\n\n`;
+    });
+    
+    content += `${newsletterFooter}`;
+    return content;
+  };
+
+  // Copy to clipboard functionality
+  const copyToClipboard = async () => {
+    try {
+      const content = generatePreviewContent();
+      await navigator.clipboard.writeText(content);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = generatePreviewContent();
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  // Extract descriptions for translation
+  const extractDescriptions = () => {
+    const selectedArticlesList = getSelectedArticles();
+    const descriptions = selectedArticlesList
+      .filter(article => article.description)
+      .map((article, index) => ({
+        id: article.id,
+        title: article.title,
+        description: article.description,
+        order: index + 1
+      }));
+    
+    const descriptionsText = descriptions
+      .map(item => `[${item.order}] ${item.title}\n${item.description}`)
+      .join('\n\n---\n\n');
+    
+    return descriptionsText;
+  };
+
+  const copyDescriptionsForTranslation = async () => {
+    try {
+      const descriptions = extractDescriptions();
+      await navigator.clipboard.writeText(descriptions);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy descriptions:', err);
+    }
+  };
+
   if (loading && articles.length === 0) {
     return (
       <div className="container mx-auto px-4 py-6">
@@ -198,6 +281,13 @@ export default function NewsletterPage() {
             <span className="text-sm text-gray-500">
               {selectedArticles.size} articles selected
             </span>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              {showPreview ? 'Hide Preview' : 'Show Preview'}
+            </button>
             {selectedArticles.size > 0 && (
               <button
                 onClick={generateNewsletter}
@@ -218,49 +308,51 @@ export default function NewsletterPage() {
         </div>
 
         {/* Newsletter Settings */}
-        {selectedArticles.size > 0 && (
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Newsletter Settings</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={newsletterTitle}
-                  onChange={(e) => setNewsletterTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Introduction
-                </label>
-                <input
-                  type="text"
-                  value={newsletterIntro}
-                  onChange={(e) => setNewsletterIntro(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Footer
-                </label>
-                <input
-                  type="text"
-                  value={newsletterFooter}
-                  onChange={(e) => setNewsletterFooter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Newsletter Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title
+              </label>
+              <input
+                type="text"
+                value={newsletterTitle}
+                onChange={(e) => setNewsletterTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Introduction
+              </label>
+              <input
+                type="text"
+                value={newsletterIntro}
+                onChange={(e) => setNewsletterIntro(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Footer
+              </label>
+              <input
+                type="text"
+                value={newsletterFooter}
+                onChange={(e) => setNewsletterFooter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Search and Filter */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Main Content: Two Panel Layout */}
+        <div className={`grid ${showPreview && selectedArticles.size > 0 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+          {/* Left Panel: Article Selection */}
+          <div className="space-y-4">
+            {/* Search and Filter */}
+            <div className="bg-white rounded-lg shadow p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4 mb-6">
             <div className="relative flex-1 max-w-lg">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -403,6 +495,81 @@ export default function NewsletterPage() {
                 >
                   Next
                 </button>
+              </div>
+            </div>
+          )}
+            </div>
+          </div>
+
+          {/* Right Panel: Preview */}
+          {showPreview && selectedArticles.size > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Newsletter Preview</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={copyDescriptionsForTranslation}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Copy Descriptions
+                  </button>
+                  <button
+                    onClick={copyToClipboard}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    {copySuccess ? 'Copied!' : 'Copy Preview'}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-md p-4 bg-gray-50">
+                <div className="space-y-4">
+                  {/* Newsletter Title */}
+                  <h2 className="text-2xl font-bold text-gray-900">{newsletterTitle}</h2>
+                  
+                  {/* Newsletter Intro */}
+                  <p className="text-gray-700">{newsletterIntro}</p>
+                  
+                  {/* Selected Articles Preview */}
+                  <div className="space-y-4">
+                    {getSelectedArticles().map((article, index) => (
+                      <div key={article.id} className="border-l-4 border-indigo-500 pl-4 py-2">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{article.title}</h3>
+                        {article.description && (
+                          <p className="text-gray-600 mb-2 leading-relaxed">{article.description}</p>
+                        )}
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        >
+                          Read more
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Newsletter Footer */}
+                  <div className="border-t pt-4 mt-6">
+                    <p className="text-gray-700">{newsletterFooter}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Preview Summary */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                <div className="flex items-center text-sm text-blue-800">
+                  <div className="flex-1">
+                    <strong>{selectedArticles.size}</strong> articles selected
+                  </div>
+                  <div className="flex-1 text-right">
+                    <strong>{getSelectedArticles().filter(a => a.description).length}</strong> have descriptions
+                  </div>
+                </div>
               </div>
             </div>
           )}

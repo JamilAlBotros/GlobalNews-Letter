@@ -13,6 +13,7 @@ import { newsletterRoutes } from "./routes/newsletter.js";
 import { llmRoutes } from "./routes/llm.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { newsletterTranslationJobRoutes } from "./routes/newsletter-translation-jobs.js";
 import { pollingScheduler } from "./services/polling-scheduler.js";
 
 const app = Fastify({
@@ -108,6 +109,7 @@ await app.register(backupRoutes);
 await app.register(pollingRoutes);
 await app.register(translationRoutes);
 await app.register(newsletterRoutes);
+await app.register(newsletterTranslationJobRoutes);
 await app.register(llmRoutes);
 await app.register(settingsRoutes);
 await app.register(dashboardRoutes);

@@ -7,10 +7,18 @@ services:
       dockerfile: apps/api/Dockerfile
     ports:
       - "3333:3333"
+    env_file:
+      - .env.prod
     environment:
       - NODE_ENV=production
       - PORT=3333
       - DATABASE_URL=postgresql://globalnews:${POSTGRES_PASSWORD}@db:5432/globalnews
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - API_KEY=${API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_MODEL=${LLM_MODEL}
     volumes:
       - api_data:/app/data
     depends_on:
@@ -30,9 +38,11 @@ services:
       dockerfile: apps/frontend/Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - .env.prod
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     depends_on:
       api:
         condition: service_healthy

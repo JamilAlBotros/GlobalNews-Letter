@@ -148,6 +148,42 @@ export async function initializeDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_polling_jobs_created ON polling_jobs(created_at DESC);
   `);
 
+  // Newsletter translation jobs table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_translation_jobs (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      source_language TEXT NOT NULL DEFAULT 'en',
+      target_languages TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      priority TEXT NOT NULL DEFAULT 'normal',
+      original_articles TEXT NOT NULL,
+      translated_content TEXT,
+      progress INTEGER NOT NULL DEFAULT 0,
+      assigned_worker TEXT,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      max_retries INTEGER NOT NULL DEFAULT 3,
+      error_message TEXT,
+      estimated_completion TEXT,
+      started_at TEXT,
+      completed_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+      CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+      CHECK (progress >= 0 AND progress <= 100),
+      CHECK (retry_count >= 0)
+    )
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_translation_status ON newsletter_translation_jobs(status);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_translation_created ON newsletter_translation_jobs(created_at DESC);
+  `);
 
   console.log("Database initialized successfully");
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ExternalLink, Calendar, Filter, Mail, Download, CheckSquare, Square, Copy, Eye, FileText } from 'lucide-react';
+import { Search, ExternalLink, Calendar, Filter, Mail, Download, CheckSquare, Square, Copy, Eye, FileText, Languages, Send } from 'lucide-react';
 
 interface Article {
   id: string;
@@ -44,6 +44,11 @@ export default function NewsletterPage() {
   // Preview state
   const [showPreview, setShowPreview] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  
+  // Translation state
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationSuccess, setTranslationSuccess] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['es', 'ar', 'fr']);
 
   // Fetch articles from database
   const fetchArticles = async (page: number = 1, search: string = '', feed: string = '') => {
@@ -261,6 +266,63 @@ export default function NewsletterPage() {
     }
   };
 
+  // Send newsletter to translation job
+  const sendToTranslation = async () => {
+    if (selectedArticles.size === 0) {
+      alert('Please select at least one article to send for translation.');
+      return;
+    }
+    
+    if (selectedLanguages.length === 0) {
+      alert('Please select at least one target language.');
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const selectedArticlesList = getSelectedArticles();
+      const content = generatePreviewContent();
+      
+      const response = await fetch('/api/newsletter-translation-jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newsletterTitle,
+          content: content,
+          source_language: 'en',
+          target_languages: selectedLanguages,
+          priority: 'normal',
+          original_articles: selectedArticlesList.map(article => ({
+            id: article.id,
+            title: article.title,
+            description: article.description,
+            url: article.url
+          }))
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create translation job');
+      }
+
+      const result = await response.json();
+      console.log('Translation job created:', result);
+      
+      setTranslationSuccess(true);
+      setTimeout(() => setTranslationSuccess(false), 3000);
+      
+      // Optionally redirect to translation jobs page
+      // window.location.href = '/translations';
+    } catch (err) {
+      alert('Failed to send newsletter for translation. Please try again.');
+      console.error('Error creating translation job:', err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   if (loading && articles.length === 0) {
     return (
       <div className="container mx-auto px-4 py-6">
@@ -289,20 +351,41 @@ export default function NewsletterPage() {
               {showPreview ? 'Hide Preview' : 'Show Preview'}
             </button>
             {selectedArticles.size > 0 && (
-              <button
-                onClick={generateNewsletter}
-                disabled={isGenerating}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <>Loading...</>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Generate Newsletter
-                  </>
-                )}
-              </button>
+              <>
+                <button
+                  onClick={sendToTranslation}
+                  disabled={isTranslating}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                >
+                  {isTranslating ? (
+                    <>Sending...</>
+                  ) : translationSuccess ? (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Sent!
+                    </>
+                  ) : (
+                    <>
+                      <Languages className="mr-2 h-4 w-4" />
+                      Send for Translation
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={generateNewsletter}
+                  disabled={isGenerating}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  {isGenerating ? (
+                    <>Loading...</>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Generate Newsletter
+                    </>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -310,7 +393,7 @@ export default function NewsletterPage() {
         {/* Newsletter Settings */}
         <div className="bg-blue-50 rounded-lg p-4">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Newsletter Settings</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Title
@@ -343,6 +426,32 @@ export default function NewsletterPage() {
                 onChange={(e) => setNewsletterFooter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Translation Languages
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['es', 'ar', 'fr'].map((lang) => (
+                  <label key={lang} className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedLanguages.includes(lang)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLanguages([...selectedLanguages, lang]);
+                        } else {
+                          setSelectedLanguages(selectedLanguages.filter(l => l !== lang));
+                        }
+                      }}
+                      className="mr-1 rounded"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {lang === 'es' ? 'Spanish' : lang === 'ar' ? 'Arabic' : lang === 'fr' ? 'French' : lang.toUpperCase()}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         </div>

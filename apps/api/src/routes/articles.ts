@@ -4,6 +4,7 @@ import { Article, CreateArticleInput, UpdateArticleInput } from "../schemas/arti
 import { PaginationQuery } from "../schemas/common.js";
 import { articleRepository, feedRepository } from "../repositories/index.js";
 import type { DatabaseFilterOptions } from "../types/index.js";
+import { LLMService, type SupportedLanguage } from "../services/llm.js";
 
 interface ArticleRow {
   id: string;
@@ -38,6 +39,7 @@ function mapArticleRow(row: ArticleRow): Article {
 }
 
 export async function articleRoutes(app: FastifyInstance): Promise<void> {
+  const llmService = new LLMService();
   app.get("/articles", async (request, reply) => {
     const query = request.query as any;
     const paginationQuery = PaginationQuery.parse(query);
@@ -254,6 +256,18 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    // Validate target language
+    const supportedLanguages: SupportedLanguage[] = ['en', 'es', 'pt', 'fr', 'ar', 'zh', 'ja'];
+    if (!supportedLanguages.includes(target_language as SupportedLanguage)) {
+      return reply.code(400).type("application/problem+json").send({
+        type: "about:blank",
+        title: "Unsupported target language",
+        status: 400,
+        detail: `Target language '${target_language}' is not supported. Supported languages: ${supportedLanguages.join(', ')}`,
+        instance: request.url
+      });
+    }
+
     try {
       const article = await articleRepository.findById(id);
       if (!article) {
@@ -265,13 +279,77 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      // Translation service not yet implemented
-      return reply.code(501).type("application/problem+json").send({
-        type: "about:blank",
-        title: "Translation service not implemented",
-        status: 501,
-        detail: "Article translation functionality is not yet available",
-        instance: request.url
+      // Detect source language if not already detected
+      let sourceLanguage = article.detected_language as SupportedLanguage;
+      if (!sourceLanguage || !supportedLanguages.includes(sourceLanguage)) {
+        const detection = await llmService.detectLanguage(article.title + ' ' + (article.description || ''));
+        sourceLanguage = detection.language;
+      }
+
+      // Skip translation if source and target are the same
+      if (sourceLanguage === target_language) {
+        return reply.code(200).send({
+          article_id: id,
+          source_language: sourceLanguage,
+          target_language: target_language,
+          translated_title: article.title,
+          translated_description: article.description,
+          translated_content: article.content,
+          translation_status: 'skipped',
+          message: 'Source and target languages are the same'
+        });
+      }
+
+      // Translate title, description, and content
+      const translations = await Promise.allSettled([
+        // Always translate title
+        llmService.translateText({
+          text: article.title,
+          sourceLanguage,
+          targetLanguage: target_language as SupportedLanguage,
+          contentType: 'title'
+        }),
+        // Translate description if it exists
+        article.description ? llmService.translateText({
+          text: article.description,
+          sourceLanguage,
+          targetLanguage: target_language as SupportedLanguage,
+          contentType: 'description'
+        }) : null,
+        // Translate content if it exists (truncate if very long)
+        article.content ? llmService.translateText({
+          text: article.content.slice(0, 5000), // Limit content length to avoid token limits
+          sourceLanguage,
+          targetLanguage: target_language as SupportedLanguage,
+          contentType: 'content'
+        }) : null
+      ]);
+
+      const translatedTitle = translations[0].status === 'fulfilled' ? translations[0].value.translatedText : article.title;
+      const translatedDescription = article.description && translations[1] && translations[1].status === 'fulfilled' 
+        ? (translations[1].value as any).translatedText 
+        : article.description;
+      const translatedContent = article.content && translations[2] && translations[2].status === 'fulfilled' 
+        ? (translations[2].value as any).translatedText 
+        : article.content;
+
+      return reply.code(200).send({
+        article_id: id,
+        source_language: sourceLanguage,
+        target_language: target_language,
+        translated_title: translatedTitle,
+        translated_description: translatedDescription,
+        translated_content: translatedContent,
+        translation_status: 'completed',
+        quality_scores: {
+          title: translations[0].status === 'fulfilled' ? translations[0].value.qualityScore : 0,
+          description: article.description && translations[1] && translations[1].status === 'fulfilled' 
+            ? (translations[1].value as any).qualityScore 
+            : null,
+          content: article.content && translations[2] && translations[2].status === 'fulfilled' 
+            ? (translations[2].value as any).qualityScore 
+            : null
+        }
       });
     } catch (error) {
       console.error('Translation error:', error);
@@ -279,7 +357,7 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
         type: "about:blank",
         title: "Translation failed",
         status: 500,
-        detail: "Failed to translate article",
+        detail: "Failed to translate article due to an internal error",
         instance: request.url
       });
     }
@@ -288,7 +366,7 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
   // Summarize article endpoint
   app.post("/articles/:id/summarize", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { style = 'concise' } = request.body as { style?: string };
+    const { style = 'brief' } = request.body as { style?: string };
 
     try {
       const article = await articleRepository.findById(id);
@@ -301,23 +379,47 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      if (!article.content && !article.description) {
+      if (!article.content && !article.description && !article.title) {
         return reply.code(400).type("application/problem+json").send({
           type: "about:blank",
           title: "No content to summarize",
           status: 400,
-          detail: "Article has no content or description",
+          detail: "Article has no content, description, or title",
           instance: request.url
         });
       }
 
-      // Summarization service not yet implemented
-      return reply.code(501).type("application/problem+json").send({
-        type: "about:blank",
-        title: "Summarization service not implemented",
-        status: 501,
-        detail: "Article summarization functionality is not yet available",
-        instance: request.url
+      // Combine available content for summarization
+      const contentToSummarize = [
+        article.title,
+        article.description,
+        article.content
+      ].filter(Boolean).join('\n\n');
+
+      // Detect language for better summarization
+      let language: SupportedLanguage = 'en';
+      if (article.detected_language && ['en', 'es', 'pt', 'fr', 'ar', 'zh', 'ja'].includes(article.detected_language)) {
+        language = article.detected_language as SupportedLanguage;
+      } else {
+        const detection = await llmService.detectLanguage(contentToSummarize);
+        language = detection.language;
+      }
+
+      const summaryResponse = await llmService.summarizeText({
+        text: contentToSummarize,
+        language,
+        maxLength: 300,
+        style: style as 'brief' | 'detailed' | 'bullet-points'
+      });
+
+      return reply.code(200).send({
+        article_id: id,
+        summary: summaryResponse.summary,
+        language,
+        style,
+        processing_time_ms: summaryResponse.processingTimeMs,
+        model: summaryResponse.model,
+        key_points: summaryResponse.keyPoints
       });
     } catch (error) {
       console.error('Summarization error:', error);
@@ -325,7 +427,7 @@ export async function articleRoutes(app: FastifyInstance): Promise<void> {
         type: "about:blank",
         title: "Summarization failed",
         status: 500,
-        detail: "Failed to summarize article",
+        detail: "Failed to summarize article due to an internal error",
         instance: request.url
       });
     }

@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   
   try {
-    const backendUrl = new URL('/newsletter-translation-jobs', process.env.NEXT_PUBLIC_API_BASE_URL || 'http://api:3333');
+    const backendUrl = new URL('/newsletter-translation-jobs', process.env.BASE_API || 'http://localhost:3333');
     searchParams.forEach((value, key) => {
       backendUrl.searchParams.append(key, value);
     });
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    const backendUrl = new URL('/newsletter-translation-jobs', process.env.NEXT_PUBLIC_API_BASE_URL || 'http://api:3333');
+    const backendUrl = new URL('/newsletter-translation-jobs', process.env.BASE_API || 'http://localhost:3333');
 
     const response = await fetch(backendUrl.toString(), {
       method: 'POST',

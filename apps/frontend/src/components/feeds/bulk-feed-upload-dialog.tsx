@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
+
+const BASE_API = process.env.BASE_API || 'http://localhost:3333';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   X, 
@@ -146,7 +148,7 @@ export function BulkFeedUploadDialog({ isOpen, onClose }: BulkFeedUploadDialogPr
 
   const bulkCreateMutation = useMutation({
     mutationFn: async (feeds: ParsedFeed[]) => {
-      const response = await fetch('http://localhost:3333/api/feeds/batch', {
+      const response = await fetch(`${BASE_API}/api/feeds/batch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

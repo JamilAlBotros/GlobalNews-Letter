@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   
   try {
-    const backendUrl = new URL('/feeds/instances', process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333');
+    const backendUrl = new URL('/feeds/instances', process.env.BASE_API || 'http://localhost:3333');
     searchParams.forEach((value, key) => {
       backendUrl.searchParams.append(key, value);
     });

@@ -23,13 +23,14 @@ services:
     ports:
       - "3333:3333"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3333
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=globalnews
       - DB_PASSWORD=dev_password_change_in_prod
       - DB_NAME=globalnews
+      - DATABASE_URL=postgresql://globalnews:dev_password_change_in_prod@db:5432/globalnews
     depends_on:
       db:
         condition: service_healthy
@@ -47,8 +48,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_BASE_URL=http://api:3333
+      - NODE_ENV=development
+      - BASE_API=http://api:3333
     depends_on:
       - api
 

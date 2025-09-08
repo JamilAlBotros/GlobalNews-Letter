@@ -5,7 +5,7 @@ export async function GET(
   { params }: { params: { section: string } }
 ) {
   try {
-    const backendUrl = new URL(`/settings/${params.section}`, process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333');
+    const backendUrl = new URL(`/settings/${params.section}`, process.env.BASE_API || 'http://localhost:3333');
 
     const response = await fetch(backendUrl.toString(), {
       method: 'GET',
@@ -39,7 +39,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const backendUrl = new URL(`/settings/${params.section}`, process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333');
+    const backendUrl = new URL(`/settings/${params.section}`, process.env.BASE_API || 'http://localhost:3333');
 
     const response = await fetch(backendUrl.toString(), {
       method: 'PUT',

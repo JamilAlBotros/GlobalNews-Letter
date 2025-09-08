@@ -198,13 +198,14 @@ export type PollingJobsResponseType = z.infer<typeof PollingJobsResponse>;
 export type FeedFilterOptionsType = z.infer<typeof FeedFilterOptions>;
 export type FilteredFeedsResponseType = z.infer<typeof FilteredFeedsResponse>;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
+const API_BASE_URL = process.env.BASE_API || 'http://localhost:3333';
 
 // Ensure HTTPS in production (but allow localhost in development)
 if (typeof window === 'undefined' && 
     process.env.NODE_ENV === 'production' && 
     !API_BASE_URL.startsWith('https://') && 
-    !API_BASE_URL.startsWith('http://localhost')) {
+    !API_BASE_URL.startsWith('http://localhost') &&
+    !API_BASE_URL.startsWith('http://api:')) {
   throw new Error('API_BASE_URL must use HTTPS in production');
 }
 

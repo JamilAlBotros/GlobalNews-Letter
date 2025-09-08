@@ -17,7 +17,6 @@ const LLMSettingsSchema = z.object({
   model: z.string().min(1),
   maxTokens: z.number().min(1).max(8192),
   temperature: z.number().min(0).max(2),
-  mockInDev: z.boolean()
 });
 
 const NewsAPISettingsSchema = z.object({
@@ -99,7 +98,6 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         model: llmConfig.model,
         maxTokens: llmConfig.maxTokens,
         temperature: llmConfig.temperature,
-        mockInDev: llmConfig.mockInDev,
         hasApiKey: !!llmConfig.apiKey
       },
       newsapi: {
@@ -134,7 +132,6 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       model: llmConfig.model,
       maxTokens: llmConfig.maxTokens,
       temperature: llmConfig.temperature,
-      mockInDev: llmConfig.mockInDev,
       hasApiKey: !!llmConfig.apiKey,
       supportedProviders: ['openai', 'anthropic', 'ollama', 'mock']
     };
@@ -156,7 +153,6 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
           model: llmConfig.model,
           maxTokens: llmConfig.maxTokens,
           temperature: llmConfig.temperature,
-          mockInDev: llmConfig.mockInDev
         }
       });
     } catch (error: any) {

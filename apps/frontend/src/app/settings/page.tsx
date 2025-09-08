@@ -19,7 +19,6 @@ interface LLMSettings {
   model: string;
   maxTokens: number;
   temperature: number;
-  mockInDev: boolean;
   hasApiKey: boolean;
   supportedProviders?: string[];
 }
@@ -412,20 +411,6 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.llm.mockInDev}
-                    onChange={(e) => {
-                      const newSettings = { ...settings.llm, mockInDev: e.target.checked };
-                      setSettings({ ...settings, llm: newSettings });
-                    }}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-700">
-                    Use mock responses in development
-                  </label>
-                </div>
 
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-700">

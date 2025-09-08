@@ -56,9 +56,7 @@ export class LLMService {
   private readonly headers: Record<string, string> = {};
 
   constructor() {
-    if (this.config.mockInDev) {
-      this.baseUrl = 'mock://llm-service';
-    } else if (this.config.provider === 'openai') {
+    if (this.config.provider === 'openai') {
       this.baseUrl = this.config.baseUrl || 'https://api.openai.com/v1';
       this.headers = {
         'Content-Type': 'application/json',
@@ -87,10 +85,6 @@ export class LLMService {
   async translateText(request: TranslationRequest): Promise<TranslationResponse> {
     const startTime = Date.now();
 
-    // Mock response in development without API key
-    if (this.config.mockInDev) {
-      return this.mockTranslation(request, startTime);
-    }
 
     try {
       if (this.config.provider === 'openai') {
@@ -113,10 +107,6 @@ export class LLMService {
   async summarizeText(request: SummarizationRequest): Promise<SummarizationResponse> {
     const startTime = Date.now();
 
-    // Mock response in development
-    if (this.config.mockInDev) {
-      return this.mockSummarization(request, startTime);
-    }
 
     try {
       if (this.config.provider === 'openai') {
@@ -137,11 +127,6 @@ export class LLMService {
    * Detect language of text
    */
   async detectLanguage(text: string): Promise<{ language: SupportedLanguage; confidence: number }> {
-    if (this.config.mockInDev) {
-      // Simple heuristic for development
-      const lang = this.simpleLanguageDetection(text);
-      return { language: lang, confidence: 0.9 };
-    }
 
     if (this.config.provider === 'ollama') {
       return await this.detectLanguageWithOllama(text);
@@ -491,30 +476,6 @@ ${request.text}`;
     }
   }
 
-  private mockTranslation(request: TranslationRequest, startTime: number): TranslationResponse {
-    // Simple mock translation for development
-    const mockText = `[TRANSLATED_${request.targetLanguage.toUpperCase()}] ${request.text}`;
-    
-    return {
-      translatedText: mockText,
-      qualityScore: 0.8,
-      confidence: 0.9,
-      model: 'mock-translator',
-      processingTimeMs: Date.now() - startTime
-    };
-  }
-
-  private mockSummarization(request: SummarizationRequest, startTime: number): SummarizationResponse {
-    const words = request.text.split(' ');
-    const summaryLength = Math.min(words.length, Math.ceil(request.maxLength / 6));
-    const summary = `[SUMMARY] ${words.slice(0, summaryLength).join(' ')}...`;
-    
-    return {
-      summary,
-      model: 'mock-summarizer',
-      processingTimeMs: Date.now() - startTime
-    };
-  }
 
   private async detectLanguageWithOllama(text: string): Promise<{ language: SupportedLanguage; confidence: number }> {
     const prompt = `You are a language detection expert. Analyze the following text and determine its language.
@@ -611,9 +572,6 @@ Language code:`;
    * Health check for LLM service
    */
   async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'unhealthy'; responseTimeMs?: number }> {
-    if (this.config.mockInDev) {
-      return { status: 'healthy', responseTimeMs: 50 };
-    }
 
     const startTime = Date.now();
     try {
@@ -659,14 +617,6 @@ Language code:`;
   }> {
     const startTime = Date.now();
 
-    // Mock response in development
-    if (this.config.mockInDev) {
-      return {
-        category: text.toLowerCase().includes('tech') || title?.toLowerCase().includes('tech') ? 'tech' : 'finance',
-        confidence: 0.8,
-        reasoning: '[MOCK] Simple keyword-based classification'
-      };
-    }
 
     const contentToAnalyze = title ? `Title: ${title}\n\nContent: ${text}` : text;
     const languageName = language ? this.getLanguageNames()[language] : 'English';
@@ -748,26 +698,6 @@ Format: CATEGORY|CONFIDENCE|REASON`;
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
     const avgSentenceLength = sentences > 0 ? words / sentences : 0;
     
-    // Mock response in development
-    if (this.config.mockInDev) {
-      return {
-        overallScore: 0.75,
-        readabilityScore: 0.8,
-        informativenessScore: 0.7,
-        credibilityScore: 0.8,
-        engagementScore: 0.7,
-        assessmentDetails: {
-          wordCount: words,
-          sentenceCount: sentences,
-          avgSentenceLength,
-          hasProperStructure: true,
-          containsFactualClaims: true,
-          tone: 'neutral',
-          complexityLevel: 'intermediate'
-        },
-        recommendations: ['[MOCK] Consider adding more specific examples', '[MOCK] Improve paragraph structure']
-      };
-    }
 
     const contentToAnalyze = title ? `Title: ${title}\n\nContent: ${text}` : text;
     const languageName = language ? this.getLanguageNames()[language] : 'English';

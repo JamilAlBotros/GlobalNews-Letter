@@ -31,6 +31,11 @@ services:
       - DB_PASSWORD=dev_password_change_in_prod
       - DB_NAME=globalnews
       - DATABASE_URL=postgresql://globalnews:dev_password_change_in_prod@db:5432/globalnews
+      - LLM_PROVIDER=ollama
+      - LLM_BASE_URL=http://host.docker.internal:11434
+      - LLM_MODEL=mistral
+      - LLM_MAX_TOKENS=1000
+      - LLM_TEMPERATURE=0.3
     depends_on:
       db:
         condition: service_healthy

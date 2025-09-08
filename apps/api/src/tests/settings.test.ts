@@ -125,7 +125,6 @@ describe('Settings API Endpoints', () => {
       expect(data).toHaveProperty('model');
       expect(data).toHaveProperty('maxTokens');
       expect(data).toHaveProperty('temperature');
-      expect(data).toHaveProperty('mockInDev');
       expect(data).toHaveProperty('hasApiKey');
       expect(data).toHaveProperty('supportedProviders');
       

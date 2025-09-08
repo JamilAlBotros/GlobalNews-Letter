@@ -12,7 +12,6 @@ const EnvironmentSchema = z.object({
   LLM_MODEL: z.string().default('mistral'),
   LLM_MAX_TOKENS: z.string().transform(Number).default('1000'),
   LLM_TEMPERATURE: z.string().transform(Number).default('0.3'),
-  LLM_MOCK_IN_DEV: z.string().transform(Boolean).default('false'),
   
   // NewsAPI Configuration
   NEWSAPI_KEY: z.string().optional(),
@@ -43,7 +42,6 @@ export const llmConfig = {
   model: env.LLM_MODEL,
   maxTokens: env.LLM_MAX_TOKENS,
   temperature: env.LLM_TEMPERATURE,
-  mockInDev: env.LLM_MOCK_IN_DEV || (isDevelopment && !env.LLM_API_KEY),
 };
 
 export const newsApiConfig = {

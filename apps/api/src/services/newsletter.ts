@@ -69,7 +69,7 @@ export class NewsletterService {
     });
 
     if (result.errors.length > 0) {
-      console.warn('MJML template errors:', result.errors);
+      ErrorHandler.logError(new Error('MJML template validation errors'), { errors: result.errors });
     }
 
     return result.html;
@@ -105,7 +105,7 @@ export class NewsletterService {
     });
 
     if (result.errors.length > 0) {
-      console.warn('MJML template errors:', result.errors);
+      ErrorHandler.logError(new Error('MJML template validation errors'), { errors: result.errors });
     }
 
     return result.html;

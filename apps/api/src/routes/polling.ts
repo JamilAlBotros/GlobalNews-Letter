@@ -511,10 +511,7 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
     // Process each feed
     for (const feed of activeFeeds) {
       try {
-        console.log(`Polling feed: ${feed.name} (${feed.url})`);
-        
         const feedArticles = await fetchAndParseRSSFeed(feed.url);
-        console.log(`Found ${feedArticles.length} articles in ${feed.name}`);
         
         let newArticles = 0;
         
@@ -552,9 +549,7 @@ async function executePoll(): Promise<{ feedsProcessed: number; articlesFound: n
         // Update feed timestamp to track polling activity
         await feedRepository.updateLastFetched(feed.id);
         
-        if (newArticles > 0) {
-          console.log(`Added ${newArticles} new articles from ${feed.name}`);
-        }
+        // Articles added successfully
         
       } catch (error) {
         console.error(`Failed to poll feed ${feed.name}: ${error}`);
@@ -605,10 +600,7 @@ async function executePollingJobWithFilters(filters: any): Promise<{ feedsProces
     // Process each filtered feed
     for (const feed of feeds) {
       try {
-        console.log(`Polling filtered feed: ${feed.name} (${feed.url})`);
-        
         const feedArticles = await fetchAndParseRSSFeed(feed.url);
-        console.log(`Found ${feedArticles.length} articles in ${feed.name}`);
         
         let newArticles = 0;
         
@@ -646,9 +638,7 @@ async function executePollingJobWithFilters(filters: any): Promise<{ feedsProces
         // Update feed timestamp to track polling activity
         await feedRepository.updateLastFetched(feed.id);
         
-        if (newArticles > 0) {
-          console.log(`Added ${newArticles} new articles from ${feed.name}`);
-        }
+        // Articles added successfully
         
       } catch (error) {
         console.error(`Failed to poll feed ${feed.name}: ${error}`);

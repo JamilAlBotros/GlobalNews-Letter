@@ -26,7 +26,7 @@ const GenerateFromArticlesInput = z.object({
 
 
 export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
-  // Generate preview newsletter with sample data
+  // Generate preview newsletter with placeholder data for demonstration
   app.post("/newsletter/preview", async (request, reply) => {
     const { language } = request.body as { language?: 'ltr' | 'rtl' };
     

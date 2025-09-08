@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { llmConfig, isDevelopment } from '../config/environment.js';
+import { llmConfig } from '../config/environment.js';
 import { ErrorHandler, ExternalServiceError, TimeoutError } from '../utils/errors.js';
 
 /**
  * LLM Service for Translation and Content Processing
- * Supports OpenAI, Anthropic, and mock providers
- * Adapted from archive with enhanced error handling
+ * Supports OpenAI, Anthropic, and Ollama providers
+ * Production-ready LLM integration service
  */
 
 export type SupportedLanguage = 'en' | 'es' | 'pt' | 'fr' | 'ar' | 'zh' | 'ja';

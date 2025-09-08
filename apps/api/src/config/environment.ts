@@ -6,7 +6,7 @@ const EnvironmentSchema = z.object({
   DATABASE_URL: z.string().default('./data/newsletter.db'),
   
   // LLM Configuration
-  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'ollama', 'mock']).default('ollama'),
+  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'ollama']).default('ollama'),
   LLM_API_KEY: z.string().optional(),
   LLM_BASE_URL: z.string().default('http://127.0.0.1:11434'),
   LLM_MODEL: z.string().default('mistral'),

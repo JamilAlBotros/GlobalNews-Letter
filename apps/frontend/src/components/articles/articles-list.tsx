@@ -70,7 +70,7 @@ export function ArticlesList() {
   // Article action mutations
   const translateMutation = useMutation({
     mutationFn: async ({ articleId, targetLanguage }: { articleId: string; targetLanguage: string }) => {
-      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/translate`, {
+      const response = await fetch(`/api/articles/${articleId}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_language: targetLanguage }),
@@ -87,7 +87,7 @@ export function ArticlesList() {
 
   const summarizeMutation = useMutation({
     mutationFn: async (articleId: string) => {
-      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/summarize`, {
+      const response = await fetch(`/api/articles/${articleId}/summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ style: 'concise' }),
@@ -104,7 +104,7 @@ export function ArticlesList() {
 
   const bookmarkMutation = useMutation({
     mutationFn: async ({ articleId, isBookmarked }: { articleId: string; isBookmarked: boolean }) => {
-      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/bookmark`, {
+      const response = await fetch(`/api/articles/${articleId}/bookmark`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_bookmarked: isBookmarked }),

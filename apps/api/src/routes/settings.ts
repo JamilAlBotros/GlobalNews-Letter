@@ -11,7 +11,7 @@ const SystemSettingsSchema = z.object({
 });
 
 const LLMSettingsSchema = z.object({
-  provider: z.enum(['openai', 'anthropic', 'ollama', 'mock']),
+  provider: z.enum(['openai', 'anthropic', 'ollama']),
   apiKey: z.string().optional(),
   baseUrl: z.string().url(),
   model: z.string().min(1),
@@ -133,7 +133,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       maxTokens: llmConfig.maxTokens,
       temperature: llmConfig.temperature,
       hasApiKey: !!llmConfig.apiKey,
-      supportedProviders: ['openai', 'anthropic', 'ollama', 'mock']
+      supportedProviders: ['openai', 'anthropic', 'ollama']
     };
   });
 

@@ -160,6 +160,7 @@ export async function initializeDatabase(): Promise<void> {
       priority TEXT NOT NULL DEFAULT 'normal',
       original_articles TEXT NOT NULL,
       translated_content TEXT,
+      translated_articles TEXT,  -- JSON structure for article-level translations
       progress INTEGER NOT NULL DEFAULT 0,
       assigned_worker TEXT,
       retry_count INTEGER NOT NULL DEFAULT 0,
@@ -216,6 +217,25 @@ export async function initializeDatabase(): Promise<void> {
 
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_google_rss_created ON google_rss_feeds(created_at DESC);
+  `);
+
+  // Newsletter drafts table for visual editor
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_drafts (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      items TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_drafts_created ON newsletter_drafts(created_at DESC);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_drafts_updated ON newsletter_drafts(updated_at DESC);
   `);
 
   console.log("Database initialized successfully");

@@ -1,6 +1,12 @@
 import { getDatabase } from '../database/connection.js';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface TranslatedArticle {
+  id: string;
+  title: Record<string, string>; // { "es": "Título traducido", "fr": "Titre traduit" }
+  summary: Record<string, string>; // { "es": "Resumen traducido", "fr": "Résumé traduit" }
+}
+
 export interface NewsletterTranslationJob {
   id: string;
   title: string;
@@ -11,6 +17,7 @@ export interface NewsletterTranslationJob {
   priority: 'low' | 'normal' | 'high' | 'urgent';
   original_articles: any[];
   translated_content: Record<string, string> | null;
+  translated_articles: Record<string, TranslatedArticle[]> | null; // { "es": [...], "fr": [...] }
   progress: number;
   assigned_worker: string | null;
   retry_count: number;
@@ -37,6 +44,7 @@ export interface UpdateNewsletterTranslationJobInput {
   progress?: number;
   assigned_worker?: string;
   translated_content?: Record<string, string>;
+  translated_articles?: Record<string, TranslatedArticle[]>;
   error_message?: string;
   estimated_completion?: string;
 }
@@ -147,6 +155,11 @@ export class NewsletterTranslationJobRepository {
       values.push(JSON.stringify(input.translated_content));
     }
     
+    if (input.translated_articles !== undefined) {
+      updates.push(`translated_articles = $${paramIndex++}`);
+      values.push(JSON.stringify(input.translated_articles));
+    }
+    
     if (input.error_message !== undefined) {
       updates.push(`error_message = $${paramIndex++}`);
       values.push(input.error_message);
@@ -224,6 +237,7 @@ export class NewsletterTranslationJobRepository {
       priority: row.priority,
       original_articles: JSON.parse(row.original_articles || '[]'),
       translated_content: row.translated_content ? JSON.parse(row.translated_content) : null,
+      translated_articles: row.translated_articles ? JSON.parse(row.translated_articles) : null,
       progress: row.progress || 0,
       assigned_worker: row.assigned_worker,
       retry_count: row.retry_count || 0,

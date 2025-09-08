@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react';
 
-const BASE_API = process.env.BASE_API || 'http://localhost:3333';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api';
 import { 
   X, 
   Upload, 
@@ -148,25 +148,19 @@ export function BulkFeedUploadDialog({ isOpen, onClose }: BulkFeedUploadDialogPr
 
   const bulkCreateMutation = useMutation({
     mutationFn: async (feeds: ParsedFeed[]) => {
-      const response = await fetch(`${BASE_API}/api/feeds/batch`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(feeds),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-        throw new Error(error.detail || error.message || 'Failed to upload feeds');
-      }
-      
-      return response.json() as Promise<BulkUploadResult>;
+      return apiClient.batchCreateFeeds(feeds);
     },
     onSuccess: (data) => {
+      console.log('Batch upload successful:', data);
       setUploadResult(data);
       setStep('result');
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
+    },
+    onError: (error) => {
+      console.error('Bulk upload mutation error:', error);
+      alert(`Upload failed: ${error.message}`);
+      // Reset to preview step on error so user can retry
+      setStep('preview');
     },
   });
 

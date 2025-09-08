@@ -8,7 +8,7 @@ interface TranslationJob {
   title: string;
   content: string;
   source_language: string;
-  target_languages: string[];
+  target_languages: string; // This is stored as JSON string in DB
   status: string;
 }
 
@@ -29,8 +29,11 @@ async function processTranslationJob(jobId: string) {
       return;
     }
 
+    // Parse target languages from JSON string
+    const targetLanguages: string[] = JSON.parse(job.target_languages);
+    
     console.log(`Found job: ${job.title}`);
-    console.log(`Languages to translate: ${job.target_languages.join(', ')}`);
+    console.log(`Languages to translate: ${targetLanguages.join(', ')}`);
 
     // Update progress
     await db.run(`
@@ -42,8 +45,8 @@ async function processTranslationJob(jobId: string) {
     const translatedContent: Record<string, string> = {};
 
     // Translate to each target language
-    for (let i = 0; i < job.target_languages.length; i++) {
-      const targetLang = job.target_languages[i];
+    for (let i = 0; i < targetLanguages.length; i++) {
+      const targetLang = targetLanguages[i];
       console.log(`Translating to ${targetLang}...`);
 
       try {
@@ -57,7 +60,7 @@ async function processTranslationJob(jobId: string) {
         translatedContent[targetLang] = translation.translatedText;
         
         // Update progress
-        const progress = Math.round(((i + 1) / job.target_languages.length) * 90) + 10;
+        const progress = Math.round(((i + 1) / targetLanguages.length) * 90) + 10;
         await db.run(`
           UPDATE newsletter_translation_jobs 
           SET progress = $1, updated_at = $2

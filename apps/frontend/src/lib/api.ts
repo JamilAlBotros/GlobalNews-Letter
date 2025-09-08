@@ -337,6 +337,33 @@ class ApiClient {
     });
   }
 
+  async batchCreateFeeds(feeds: Array<{
+    name: string;
+    url: string;
+    language: string;
+    region: string;
+    category: string;
+    type: string;
+    description?: string;
+  }>) {
+    return this.request<{
+      message: string;
+      summary: {
+        total_processed: number;
+        successful: number;
+        failed: number;
+      };
+      errors: Array<{
+        index: number;
+        url: string;
+        error: string;
+      }>;
+    }>('/feeds/batch', {
+      method: 'POST',
+      body: JSON.stringify(feeds),
+    });
+  }
+
   // Articles
   async getArticles(page: number = 1, limit: number = 20, feedId?: string) {
     try {

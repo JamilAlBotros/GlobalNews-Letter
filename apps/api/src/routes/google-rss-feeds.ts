@@ -110,7 +110,6 @@ export const googleRSSFeedRoutes: FastifyPluginAsync = async (fastify) => {
       const body = request.body as {
         mode: 'topic' | 'search';
         topic?: string;
-        topicKey?: string;
         searchQuery?: string;
         timeFrame?: string;
         country: string;
@@ -127,19 +126,10 @@ export const googleRSSFeedRoutes: FastifyPluginAsync = async (fastify) => {
       let url: string;
 
       if (body.mode === 'topic' && body.topic) {
-        let topicId: string;
-        
-        if (body.topicKey) {
-          // Use custom topic key directly
-          topicId = body.topicKey;
-        } else {
-          // Look up built-in topic
-          topicId = GOOGLE_TOPICS[body.topic as keyof typeof GOOGLE_TOPICS];
-          if (!topicId) {
-            return reply.code(400).send({ error: 'Invalid topic' });
-          }
+        const topicId = GOOGLE_TOPICS[body.topic as keyof typeof GOOGLE_TOPICS];
+        if (!topicId) {
+          return reply.code(400).send({ error: 'Invalid topic' });
         }
-        
         url = generateTopicRSSUrl(topicId, countryCode, langCode);
       } else if (body.mode === 'search' && body.searchQuery && body.timeFrame) {
         const timeFrameCode = TIME_FRAMES[body.timeFrame as keyof typeof TIME_FRAMES];

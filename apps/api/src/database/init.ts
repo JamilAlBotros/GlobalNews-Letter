@@ -218,6 +218,92 @@ export async function initializeDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_google_rss_created ON google_rss_feeds(created_at DESC);
   `);
 
+  // Newsletter Issues Management
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletters (
+      id TEXT PRIMARY KEY,
+      issue_number INTEGER NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      publish_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      language TEXT NOT NULL DEFAULT 'en',
+      content_metadata TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      published_at TEXT,
+      CHECK (status IN ('draft', 'published', 'archived'))
+    )
+  `);
+
+  // Reusable Newsletter Sections
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_sections (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      section_type TEXT NOT NULL,
+      template_content TEXT NOT NULL,
+      is_recurring BOOLEAN DEFAULT FALSE,
+      display_order INTEGER DEFAULT 0,
+      metadata TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      CHECK (section_type IN ('header', 'top_news', 'market_trends', 'footer', 'custom'))
+    )
+  `);
+
+  // Newsletter Relations
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_relations (
+      id TEXT PRIMARY KEY,
+      source_newsletter_id TEXT NOT NULL REFERENCES newsletters(id),
+      target_newsletter_id TEXT NOT NULL REFERENCES newsletters(id),
+      relation_type TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      CHECK (relation_type IN ('previous', 'next', 'related'))
+    )
+  `);
+
+  // Article-Newsletter Assignments
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_article_assignments (
+      id TEXT PRIMARY KEY,
+      newsletter_id TEXT NOT NULL REFERENCES newsletters(id),
+      article_id TEXT NOT NULL REFERENCES articles(id),
+      section_id TEXT REFERENCES newsletter_sections(id),
+      position INTEGER NOT NULL DEFAULT 0,
+      custom_title TEXT,
+      custom_description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Newsletter indexes
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletters_issue_number ON newsletters(issue_number);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletters_status ON newsletters(status);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletters_publish_date ON newsletters(publish_date DESC);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_sections_type ON newsletter_sections(section_type);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_relations_source ON newsletter_relations(source_newsletter_id);
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_newsletter_assignments_newsletter ON newsletter_article_assignments(newsletter_id);
+  `);
+
   console.log("Database initialized successfully");
 }
 

@@ -62,17 +62,117 @@ export const CategorizationRequestInput = z.object({
   language: SupportedLanguage.optional()
 }).openapi('CategorizationRequestInput');
 
+// Enhanced categories for comprehensive taxonomy system
+export const ContentCategory = z.enum([
+  'finance', 'tech', 'politics', 'health', 'science', 'sports', 
+  'entertainment', 'business', 'education', 'travel', 'lifestyle',
+  'gaming', 'crypto', 'environment', 'opinion', 'breaking'
+]);
+
 export const CategorizationResponse = z.object({
-  category: z.enum(['finance', 'tech']),
+  primary_category: ContentCategory,
   confidence: z.number().min(0).max(1),
-  model: z.string(),
-  processing_time_ms: z.number(),
-  alternative_categories: z.array(z.object({
-    category: z.enum(['finance', 'tech']),
+  secondary_categories: z.array(z.object({
+    category: ContentCategory,
     confidence: z.number().min(0).max(1)
   })).optional(),
+  tags: z.array(z.string()).optional(),
+  model: z.string(),
+  processing_time_ms: z.number(),
   reasoning: z.string().optional()
 }).openapi('CategorizationResponse');
+
+// Sentiment Analysis schemas
+export const SentimentAnalysisRequestInput = z.object({
+  text: z.string().min(1).max(10000),
+  title: z.string().optional(),
+  language: SupportedLanguage.optional()
+}).openapi('SentimentAnalysisRequestInput');
+
+export const SentimentAnalysisResponse = z.object({
+  sentiment: z.enum(['positive', 'negative', 'neutral', 'mixed']),
+  confidence: z.number().min(0).max(1),
+  sentiment_scores: z.object({
+    positive: z.number().min(0).max(1),
+    negative: z.number().min(0).max(1),
+    neutral: z.number().min(0).max(1)
+  }),
+  emotional_indicators: z.array(z.string()).optional(),
+  model: z.string(),
+  processing_time_ms: z.number()
+}).openapi('SentimentAnalysisResponse');
+
+// Bias Detection schemas
+export const BiasDetectionRequestInput = z.object({
+  text: z.string().min(1).max(15000),
+  title: z.string().optional(),
+  language: SupportedLanguage.optional()
+}).openapi('BiasDetectionRequestInput');
+
+export const BiasDetectionResponse = z.object({
+  overall_bias_score: z.number().min(0).max(1), // 0 = neutral, 1 = highly biased
+  bias_types: z.array(z.object({
+    type: z.enum(['political', 'demographic', 'confirmation', 'selection', 'emotional', 'commercial']),
+    severity: z.enum(['low', 'moderate', 'high']),
+    confidence: z.number().min(0).max(1),
+    indicators: z.array(z.string()).optional()
+  })),
+  political_leaning: z.enum(['left', 'center-left', 'center', 'center-right', 'right', 'neutral']).optional(),
+  factual_vs_opinion_score: z.number().min(0).max(1), // 0 = pure opinion, 1 = factual
+  language_tone: z.enum(['objective', 'subjective', 'inflammatory', 'sensational', 'balanced']),
+  model: z.string(),
+  processing_time_ms: z.number(),
+  recommendations: z.array(z.string()).optional()
+}).openapi('BiasDetectionResponse');
+
+// Enhanced Tagging and Topic Extraction
+export const TopicExtractionRequestInput = z.object({
+  text: z.string().min(1).max(15000),
+  title: z.string().optional(),
+  max_topics: z.number().min(3).max(20).default(10),
+  language: SupportedLanguage.optional()
+}).openapi('TopicExtractionRequestInput');
+
+export const TopicExtractionResponse = z.object({
+  topics: z.array(z.object({
+    topic: z.string(),
+    relevance_score: z.number().min(0).max(1),
+    category: ContentCategory.optional()
+  })),
+  entities: z.array(z.object({
+    entity: z.string(),
+    type: z.enum(['person', 'organization', 'location', 'product', 'event', 'concept']),
+    confidence: z.number().min(0).max(1)
+  })).optional(),
+  keywords: z.array(z.object({
+    keyword: z.string(),
+    importance: z.number().min(0).max(1)
+  })),
+  model: z.string(),
+  processing_time_ms: z.number()
+}).openapi('TopicExtractionResponse');
+
+// Comprehensive Content Analysis (combines multiple analyses)
+export const ContentAnalysisRequestInput = z.object({
+  text: z.string().min(1).max(15000),
+  title: z.string().optional(),
+  url: z.string().url().optional(),
+  language: SupportedLanguage.optional(),
+  analysis_types: z.array(z.enum([
+    'summarization', 'sentiment', 'bias', 'quality', 'categorization', 'topics', 'all'
+  ])).default(['all'])
+}).openapi('ContentAnalysisRequestInput');
+
+export const ContentAnalysisResponse = z.object({
+  summary: SummarizationResponse.optional(),
+  sentiment: SentimentAnalysisResponse.optional(),
+  bias: BiasDetectionResponse.optional(),
+  quality: QualityAssessmentResponse.optional(),
+  categorization: CategorizationResponse.optional(),
+  topics: TopicExtractionResponse.optional(),
+  overall_processing_time_ms: z.number(),
+  analysis_timestamp: z.string().datetime()
+}).openapi('ContentAnalysisResponse');
 
 // Content quality assessment endpoint schemas
 export const QualityAssessmentRequestInput = z.object({
@@ -162,3 +262,40 @@ export type BatchTranslationResponseType = z.infer<typeof BatchTranslationRespon
 
 export type LLMHealthCheckResponseType = z.infer<typeof LLMHealthCheckResponse>;
 export type LLMErrorResponseType = z.infer<typeof LLMErrorResponse>;
+
+// New Advanced Content Tools types
+export type ContentCategoryType = z.infer<typeof ContentCategory>;
+export type SentimentAnalysisRequestInputType = z.infer<typeof SentimentAnalysisRequestInput>;
+export type SentimentAnalysisResponseType = z.infer<typeof SentimentAnalysisResponse>;
+export type BiasDetectionRequestInputType = z.infer<typeof BiasDetectionRequestInput>;
+export type BiasDetectionResponseType = z.infer<typeof BiasDetectionResponse>;
+export type TopicExtractionRequestInputType = z.infer<typeof TopicExtractionRequestInput>;
+export type TopicExtractionResponseType = z.infer<typeof TopicExtractionResponse>;
+export type ContentAnalysisRequestInputType = z.infer<typeof ContentAnalysisRequestInput>;
+export type ContentAnalysisResponseType = z.infer<typeof ContentAnalysisResponse>;
+
+// Batch processing for advanced content tools
+export const BatchContentAnalysisRequestInput = z.object({
+  articles: z.array(z.object({
+    id: z.string(),
+    text: z.string().min(1).max(15000),
+    title: z.string().optional(),
+    url: z.string().optional()
+  })).min(1).max(5),
+  analysis_types: z.array(z.enum(['summarization', 'sentiment', 'bias', 'quality', 'categorization', 'topics', 'all'])).default(['all'])
+}).openapi('BatchContentAnalysisRequestInput');
+
+export const BatchContentAnalysisResponse = z.object({
+  results: z.array(z.object({
+    article_id: z.string(),
+    analysis: ContentAnalysisResponse,
+    success: z.boolean(),
+    error: z.string().optional()
+  })),
+  total_processing_time_ms: z.number(),
+  successful_analyses: z.number(),
+  failed_analyses: z.number()
+}).openapi('BatchContentAnalysisResponse');
+
+export type BatchContentAnalysisRequestInputType = z.infer<typeof BatchContentAnalysisRequestInput>;
+export type BatchContentAnalysisResponseType = z.infer<typeof BatchContentAnalysisResponse>;

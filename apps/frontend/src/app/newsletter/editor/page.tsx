@@ -13,7 +13,10 @@ import {
   Trash2, 
   Edit3,
   ExternalLink,
-  Calendar
+  Calendar,
+  Folder,
+  Copy,
+  MoreHorizontal
 } from 'lucide-react';
 
 interface Article {
@@ -42,6 +45,14 @@ interface NewsletterDraft {
   updated_at?: string;
 }
 
+interface DraftSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  items_count: number;
+}
+
 export default function NewsletterEditorPage() {
   const [availableArticles, setAvailableArticles] = useState<Article[]>([]);
   const [newsletterItems, setNewsletterItems] = useState<NewsletterItem[]>([]);
@@ -52,11 +63,27 @@ export default function NewsletterEditorPage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<DraftSummary[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [loadingDrafts, setLoadingDrafts] = useState(false);
 
-  // Fetch available articles
+  // Fetch available articles and drafts
   useEffect(() => {
     fetchArticles();
+    fetchDrafts();
   }, []);
+
+  // Close drafts dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showDrafts && !(event.target as Element).closest('.drafts-dropdown')) {
+        setShowDrafts(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDrafts]);
 
   const fetchArticles = async () => {
     try {
@@ -70,6 +97,77 @@ export default function NewsletterEditorPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch available drafts
+  const fetchDrafts = async () => {
+    try {
+      setLoadingDrafts(true);
+      const response = await fetch('/api/newsletter/drafts');
+      if (response.ok) {
+        const data = await response.json();
+        setDrafts(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching drafts:', error);
+    } finally {
+      setLoadingDrafts(false);
+    }
+  };
+
+  // Load a specific draft
+  const loadDraft = async (draftId: string) => {
+    try {
+      const response = await fetch(`/api/newsletter/drafts/${draftId}`);
+      if (response.ok) {
+        const draft = await response.json();
+        setNewsletterTitle(draft.title);
+        setNewsletterItems(draft.items || []);
+        setCurrentDraftId(draft.id);
+        setShowDrafts(false);
+      } else {
+        alert('Failed to load draft');
+      }
+    } catch (error) {
+      console.error('Error loading draft:', error);
+      alert('Failed to load draft');
+    }
+  };
+
+  // Delete a draft
+  const deleteDraft = async (draftId: string) => {
+    if (!confirm('Are you sure you want to delete this draft?')) return;
+    
+    try {
+      const response = await fetch(`/api/newsletter/drafts/${draftId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        await fetchDrafts(); // Refresh the list
+        if (currentDraftId === draftId) {
+          setCurrentDraftId(null);
+        }
+      } else {
+        alert('Failed to delete draft');
+      }
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      alert('Failed to delete draft');
+    }
+  };
+
+  // Create a new newsletter (reset current state)
+  const createNewNewsletter = () => {
+    if (newsletterItems.length > 0 || newsletterTitle !== 'My Newsletter') {
+      if (!confirm('Are you sure you want to create a new newsletter? Unsaved changes will be lost.')) {
+        return;
+      }
+    }
+    setNewsletterTitle('My Newsletter');
+    setNewsletterItems([]);
+    setCurrentDraftId(null);
+    setShowDrafts(false);
   };
 
   // Filter articles based on search
@@ -171,6 +269,7 @@ export default function NewsletterEditorPage() {
       if (response.ok) {
         const result = await response.json();
         setCurrentDraftId(result.id);
+        await fetchDrafts(); // Refresh drafts list
         alert('Newsletter saved successfully!');
       } else {
         throw new Error('Failed to save newsletter');
@@ -254,6 +353,68 @@ export default function NewsletterEditorPage() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            <div className="relative drafts-dropdown">
+              <button
+                onClick={() => setShowDrafts(!showDrafts)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Folder className="mr-2 h-4 w-4" />
+                Drafts ({drafts.length})
+              </button>
+
+              {/* Drafts Dropdown */}
+              {showDrafts && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-gray-900">Newsletter Drafts</h3>
+                      <button
+                        onClick={createNewNewsletter}
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100"
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        New
+                      </button>
+                    </div>
+                    
+                    {loadingDrafts ? (
+                      <div className="text-sm text-gray-500 text-center py-4">Loading...</div>
+                    ) : drafts.length === 0 ? (
+                      <div className="text-sm text-gray-500 text-center py-4">No drafts yet</div>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {drafts.map((draft) => (
+                          <div
+                            key={draft.id}
+                            className="flex items-center justify-between p-2 hover:bg-gray-50 rounded border"
+                          >
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => loadDraft(draft.id)}>
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {draft.title}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {draft.items_count} items • {formatDate(draft.updated_at)}
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteDraft(draft.id);
+                              }}
+                              className="p-1 text-red-500 hover:text-red-700"
+                              title="Delete draft"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setIsPreviewMode(!isPreviewMode)}
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"

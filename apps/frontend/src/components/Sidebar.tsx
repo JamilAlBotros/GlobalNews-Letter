@@ -20,6 +20,7 @@ import {
   Home,
   Menu,
   X,
+  Edit3,
 } from 'lucide-react';
 
 interface NavItem {
@@ -57,6 +58,7 @@ const navigationCategories: NavCategory[] = [
     items: [
       { name: 'Articles', href: '/articles', icon: FileText },
       { name: 'Newsletter', href: '/newsletter', icon: Mail },
+      { name: 'Newsletter Editor', href: '/newsletter/editor', icon: Edit3 },
       { name: 'Translations', href: '/translations', icon: Languages },
     ],
   },

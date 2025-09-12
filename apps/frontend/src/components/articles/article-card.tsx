@@ -143,7 +143,11 @@ export function ArticleCard({ article, onPreview, onTranslate, onSummarize, onBo
                   </button>
                   
                   <button 
-                    onClick={() => onTranslate?.(article)}
+                    onClick={() => {
+                      console.log('Translate button clicked for article:', article.id);
+                      onTranslate?.(article);
+                      setShowActions(false);
+                    }}
                     className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 ${
                       onTranslate ? 'text-gray-700 hover:text-blue-600' : 'text-gray-400 cursor-not-allowed'
                     }`}
@@ -153,7 +157,11 @@ export function ArticleCard({ article, onPreview, onTranslate, onSummarize, onBo
                     <span>Translate</span>
                   </button>
                   <button 
-                    onClick={() => onSummarize?.(article)}
+                    onClick={() => {
+                      console.log('Summarize button clicked for article:', article.id);
+                      onSummarize?.(article);
+                      setShowActions(false);
+                    }}
                     className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 ${
                       onSummarize ? 'text-gray-700 hover:text-blue-600' : 'text-gray-400 cursor-not-allowed'
                     }`}

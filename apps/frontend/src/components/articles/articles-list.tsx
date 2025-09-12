@@ -70,41 +70,67 @@ export function ArticlesList() {
   // Article action mutations
   const translateMutation = useMutation({
     mutationFn: async ({ articleId, targetLanguage }: { articleId: string; targetLanguage: string }) => {
-      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/translate`, {
+      console.log(`Translating article ${articleId} to ${targetLanguage}`);
+      const response = await fetch(`/api/articles/${articleId}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_language: targetLanguage }),
       });
-      if (!response.ok) throw new Error('Translation failed');
-      return response.json();
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Translation failed:', errorData);
+        throw new Error(`Translation failed: ${errorData.error || response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Translation successful:', data);
+      return data;
     },
     onSuccess: (data, variables) => {
       setTranslations(prev => ({ ...prev, [variables.articleId]: data }));
       setActionLoading(null);
     },
-    onError: () => setActionLoading(null),
+    onError: (error) => {
+      console.error('Translation error:', error);
+      setActionLoading(null);
+      alert(`Translation failed: ${error.message}`);
+    },
   });
 
   const summarizeMutation = useMutation({
     mutationFn: async (articleId: string) => {
-      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/summarize`, {
+      console.log(`Summarizing article ${articleId}`);
+      const response = await fetch(`/api/articles/${articleId}/summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ style: 'concise' }),
       });
-      if (!response.ok) throw new Error('Summarization failed');
-      return response.json();
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Summarization failed:', errorData);
+        throw new Error(`Summarization failed: ${errorData.error || response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Summarization successful:', data);
+      return data;
     },
     onSuccess: (data, articleId) => {
       setSummaries(prev => ({ ...prev, [articleId]: data.summary }));
       setActionLoading(null);
     },
-    onError: () => setActionLoading(null),
+    onError: (error) => {
+      console.error('Summarization error:', error);
+      setActionLoading(null);
+      alert(`Summarization failed: ${error.message}`);
+    },
   });
 
   const bookmarkMutation = useMutation({
     mutationFn: async ({ articleId, isBookmarked }: { articleId: string; isBookmarked: boolean }) => {
-      const response = await fetch(`http://localhost:3333/api/articles/${articleId}/bookmark`, {
+      const response = await fetch(`/api/articles/${articleId}/bookmark`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_bookmarked: isBookmarked }),
@@ -209,18 +235,26 @@ export function ArticlesList() {
 
   // Article action handlers
   const handleTranslate = (article: Article) => {
+    if (actionLoading === article.id) return; // Prevent double clicks
+    
     setActionLoading(article.id);
     // For demo, translate to English if not English, otherwise to Spanish
     const targetLanguage = article.detected_language === 'en' ? 'es' : 'en';
+    console.log(`Starting translation for ${article.id}: ${article.detected_language} -> ${targetLanguage}`);
     translateMutation.mutate({ articleId: article.id, targetLanguage });
   };
 
   const handleSummarize = (article: Article) => {
+    if (actionLoading === article.id) return; // Prevent double clicks
+    
     setActionLoading(article.id);
+    console.log(`Starting summarization for ${article.id}`);
     summarizeMutation.mutate(article.id);
   };
 
   const handleBookmark = (article: Article) => {
+    if (actionLoading === article.id) return; // Prevent double clicks
+    
     setActionLoading(article.id);
     // Toggle bookmark status (assuming articles don't have is_bookmarked field yet)
     bookmarkMutation.mutate({ articleId: article.id, isBookmarked: true });

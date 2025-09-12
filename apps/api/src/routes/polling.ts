@@ -493,6 +493,76 @@ export async function pollingRoutes(app: FastifyInstance): Promise<void> {
       });
     }
   });
+
+  // Get polling job execution logs
+  app.get("/polling/jobs/logs", async (request, reply) => {
+    const { page = 1, limit = 50, job_id, status } = request.query as { 
+      page?: number; 
+      limit?: number; 
+      job_id?: string;
+      status?: 'success' | 'failure' | 'all';
+    };
+    
+    const result = await pollingJobRepository.findAll(1, 100); // Get all jobs first
+    const jobs = result.data;
+    
+    // Create log entries from job execution history
+    const logs = jobs.map(job => {
+      const lastRunStats = job.last_run_stats ? JSON.parse(job.last_run_stats) : null;
+      const hasRecentRun = job.last_run_time && new Date(job.last_run_time) > new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      return {
+        job_id: job.id,
+        job_name: job.name,
+        execution_time: job.last_run_time,
+        status: hasRecentRun && lastRunStats ? 'success' : (job.failed_runs > 0 ? 'failure' : 'pending'),
+        feeds_processed: lastRunStats?.feeds_processed || 0,
+        articles_found: lastRunStats?.articles_found || 0,
+        execution_time_ms: lastRunStats?.execution_time_ms || 0,
+        total_runs: job.total_runs,
+        successful_runs: job.successful_runs,
+        failed_runs: job.failed_runs,
+        next_run_time: job.next_run_time,
+        is_active: job.is_active,
+        interval_minutes: job.interval_minutes
+      };
+    }).filter(log => {
+      // Filter by job_id if provided
+      if (job_id && log.job_id !== job_id) return false;
+      
+      // Filter by status if provided
+      if (status && status !== 'all' && log.status !== status) return false;
+      
+      return true;
+    }).sort((a, b) => {
+      // Sort by execution time, most recent first
+      if (!a.execution_time && !b.execution_time) return 0;
+      if (!a.execution_time) return 1;
+      if (!b.execution_time) return -1;
+      return new Date(b.execution_time).getTime() - new Date(a.execution_time).getTime();
+    });
+    
+    // Apply pagination
+    const offset = (Number(page) - 1) * Number(limit);
+    const paginatedLogs = logs.slice(offset, offset + Number(limit));
+    
+    return reply.send({
+      data: paginatedLogs,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: logs.length,
+        total_pages: Math.ceil(logs.length / Number(limit))
+      },
+      summary: {
+        total_jobs: jobs.length,
+        active_jobs: jobs.filter(j => j.is_active).length,
+        total_successful_runs: jobs.reduce((sum, j) => sum + j.successful_runs, 0),
+        total_failed_runs: jobs.reduce((sum, j) => sum + j.failed_runs, 0),
+        recent_executions_24h: logs.filter(l => l.execution_time && new Date(l.execution_time) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length
+      }
+    });
+  });
 }
 
 // Helper function to execute a poll

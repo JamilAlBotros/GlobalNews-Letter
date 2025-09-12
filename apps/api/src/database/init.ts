@@ -1,4 +1,5 @@
 import { getDatabase, closeDatabase } from "./connection.js";
+import { newsletterTemplateService } from "../services/newsletter-template-service.js";
 
 export async function initializeDatabase(): Promise<void> {
   const db = getDatabase();
@@ -303,6 +304,14 @@ export async function initializeDatabase(): Promise<void> {
   await db.exec(`
     CREATE INDEX IF NOT EXISTS idx_newsletter_assignments_newsletter ON newsletter_article_assignments(newsletter_id);
   `);
+
+  // Seed default newsletter section templates
+  try {
+    await newsletterTemplateService.seedDefaultSections();
+    console.log("Newsletter section templates seeded successfully");
+  } catch (error) {
+    console.error("Failed to seed newsletter templates:", error);
+  }
 
   console.log("Database initialized successfully");
 }

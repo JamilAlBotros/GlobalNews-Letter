@@ -60,7 +60,7 @@ export function ArticlesList() {
   });
 
   const { data: feeds } = useQuery({
-    queryKey: ['feeds-for-filter'],
+    queryKey: ['feeds'],
     queryFn: () => apiClient.getFeeds(1, 100),
   });
 

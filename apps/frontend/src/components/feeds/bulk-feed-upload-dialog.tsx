@@ -154,7 +154,12 @@ export function BulkFeedUploadDialog({ isOpen, onClose }: BulkFeedUploadDialogPr
       console.log('Batch upload successful:', data);
       setUploadResult(data);
       setStep('result');
+      // Invalidate all feed-related queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-sources'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['active-feeds-monitor'] });
+      console.log('Bulk feed upload completed, queries invalidated');
     },
     onError: (error) => {
       console.error('Bulk upload mutation error:', error);

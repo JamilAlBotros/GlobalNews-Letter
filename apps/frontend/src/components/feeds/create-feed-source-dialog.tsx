@@ -95,9 +95,14 @@ export function CreateFeedSourceDialog({ isOpen, onClose }: CreateFeedSourceDial
       return apiClient.createFeed(feedData, crypto.randomUUID());
     },
     onSuccess: () => {
+      // Invalidate all feed-related queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
       queryClient.invalidateQueries({ queryKey: ['feed-sources'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['active-feeds-monitor'] });
       reset();
       onClose();
+      console.log('Feed created successfully, queries invalidated');
     },
   });
 

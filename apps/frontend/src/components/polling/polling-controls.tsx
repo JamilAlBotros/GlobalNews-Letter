@@ -44,6 +44,7 @@ export function PollingControls() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polling-status'] });
       queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
       queryClient.invalidateQueries({ queryKey: ['feed-sources'] });
     },
   });

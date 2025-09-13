@@ -4,7 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    const backendUrl = new URL('/newsletter/from-articles', process.env.BASE_API || 'http://localhost:3333');
+    const backendUrl = new URL('/newsletter/from-articles', process.env.BASE_API || 'http://api:3333');
     
     const response = await fetch(backendUrl.toString(), {
       method: 'POST',

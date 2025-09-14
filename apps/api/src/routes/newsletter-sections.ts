@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { newsletterSectionRepository } from "../repositories/newsletter-section-repository.js";
 import { newsletterTemplateService } from "../services/newsletter-template-service.js";
-import { CreateNewsletterSectionInput } from "@mtrx/contracts/src/schemas/newsletter.js";
+import { CreateNewsletterSectionInput } from "@mtrx/contracts";
 
 export async function newsletterSectionRoutes(app: FastifyInstance): Promise<void> {
   // List newsletter sections with filtering

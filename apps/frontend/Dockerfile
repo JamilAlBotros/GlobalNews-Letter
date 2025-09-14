@@ -13,11 +13,10 @@ COPY apps/frontend/package*.json ./apps/frontend/
 COPY packages/contracts/package*.json ./packages/contracts/
 
 # Install dependencies with frozen lockfile
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code (excluding node_modules which are already installed)
 COPY apps/frontend/src ./apps/frontend/src
-COPY apps/frontend/public ./apps/frontend/public
 COPY apps/frontend/next.config* ./apps/frontend/
 COPY apps/frontend/tailwind.config* ./apps/frontend/
 COPY apps/frontend/postcss.config* ./apps/frontend/
@@ -27,9 +26,9 @@ COPY packages/contracts/tsconfig*.json ./packages/contracts/
 COPY tsconfig*.json ./
 
 # Build contracts first
-RUN pnpm build --workspace=@mtrx/contracts
+RUN pnpm --filter=@mtrx/contracts build
 # Build the frontend application  
-RUN pnpm build --workspace=apps/frontend
+RUN pnpm --filter=@mtrx/frontend build
 
 # Production stage
 FROM node:20-alpine AS runtime
@@ -52,7 +51,6 @@ COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/package.json .
 # Copy built Next.js application with correct structure for standalone mode
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/standalone ./
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
-COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/public ./apps/frontend/public
 
 # Copy source files for development commands
 COPY --from=builder --chown=nodejs:nodejs /app/apps/frontend/src ./apps/frontend/src
@@ -62,7 +60,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/tsconfig*.json
 COPY --from=builder --chown=nodejs:nodejs /app/tsconfig*.json ./
 
 # Install all dependencies using pnpm for development commands
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Switch to non-root user
 USER nodejs

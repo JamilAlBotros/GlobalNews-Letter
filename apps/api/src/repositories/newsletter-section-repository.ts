@@ -1,7 +1,6 @@
-import { Database } from 'sqlite';
 import { v4 as uuidv4 } from 'uuid';
-import { getDatabase } from '../database/connection.js';
-import type { NewsletterSectionType, CreateNewsletterSectionInputType } from '@mtrx/contracts/src/schemas/newsletter.js';
+import { getDatabase, type PostgreSQLConnection } from '../database/connection.js';
+import type { NewsletterSectionType, CreateNewsletterSectionInputType } from '@mtrx/contracts';
 
 export interface SectionFilterOptions {
   limit?: number;
@@ -13,7 +12,7 @@ export interface SectionFilterOptions {
 }
 
 export class NewsletterSectionRepository {
-  private db: Database;
+  private db: PostgreSQLConnection;
 
   constructor() {
     this.db = getDatabase();
@@ -33,43 +32,36 @@ export class NewsletterSectionRepository {
     const params: any[] = [];
 
     if (section_type) {
-      query += ' AND section_type = ?';
+      query += ` AND section_type = $${params.length + 1}`;
       params.push(section_type);
     }
 
     if (is_recurring !== undefined) {
-      query += ' AND is_recurring = ?';
+      query += ` AND is_recurring = $${params.length + 1}`;
       params.push(is_recurring);
     }
 
-    query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`;
+    query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
-
+    const rows = await this.db.all(query, ...params);
     return rows.map(this.mapRowToSection);
   }
 
   async findById(id: string): Promise<NewsletterSectionType | null> {
-    const stmt = this.db.prepare('SELECT * FROM newsletter_sections WHERE id = ?');
-    const row = stmt.get(id);
+    const row = await this.db.get('SELECT * FROM newsletter_sections WHERE id = $1', id);
 
     if (!row) return null;
     return this.mapRowToSection(row);
   }
 
   async findByType(sectionType: string): Promise<NewsletterSectionType[]> {
-    const stmt = this.db.prepare('SELECT * FROM newsletter_sections WHERE section_type = ? ORDER BY display_order ASC');
-    const rows = stmt.all(sectionType);
-
+    const rows = await this.db.all('SELECT * FROM newsletter_sections WHERE section_type = $1 ORDER BY display_order ASC', sectionType);
     return rows.map(this.mapRowToSection);
   }
 
   async findRecurringSections(): Promise<NewsletterSectionType[]> {
-    const stmt = this.db.prepare('SELECT * FROM newsletter_sections WHERE is_recurring = TRUE ORDER BY display_order ASC');
-    const rows = stmt.all();
-
+    const rows = await this.db.all('SELECT * FROM newsletter_sections WHERE is_recurring = TRUE ORDER BY display_order ASC');
     return rows.map(this.mapRowToSection);
   }
 
@@ -77,13 +69,11 @@ export class NewsletterSectionRepository {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    const stmt = this.db.prepare(`
+    await this.db.run(`
       INSERT INTO newsletter_sections (
         id, name, display_name, section_type, template_content, is_recurring, display_order, metadata, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `,
       id,
       data.name,
       data.display_name,
@@ -114,50 +104,49 @@ export class NewsletterSectionRepository {
     const params: any[] = [];
 
     if (data.name !== undefined) {
-      updateFields.push('name = ?');
+      updateFields.push(`name = $${params.length + 1}`);
       params.push(data.name);
     }
 
     if (data.display_name !== undefined) {
-      updateFields.push('display_name = ?');
+      updateFields.push(`display_name = $${params.length + 1}`);
       params.push(data.display_name);
     }
 
     if (data.section_type !== undefined) {
-      updateFields.push('section_type = ?');
+      updateFields.push(`section_type = $${params.length + 1}`);
       params.push(data.section_type);
     }
 
     if (data.template_content !== undefined) {
-      updateFields.push('template_content = ?');
+      updateFields.push(`template_content = $${params.length + 1}`);
       params.push(data.template_content);
     }
 
     if (data.is_recurring !== undefined) {
-      updateFields.push('is_recurring = ?');
+      updateFields.push(`is_recurring = $${params.length + 1}`);
       params.push(data.is_recurring);
     }
 
     if (data.display_order !== undefined) {
-      updateFields.push('display_order = ?');
+      updateFields.push(`display_order = $${params.length + 1}`);
       params.push(data.display_order);
     }
 
     if (data.metadata !== undefined) {
-      updateFields.push('metadata = ?');
+      updateFields.push(`metadata = $${params.length + 1}`);
       params.push(data.metadata ? JSON.stringify(data.metadata) : null);
     }
 
-    updateFields.push('updated_at = ?');
+    updateFields.push(`updated_at = $${params.length + 1}`);
     params.push(new Date().toISOString());
 
+    const whereClause = `id = $${params.length + 1}`;
     params.push(id);
 
-    const stmt = this.db.prepare(`
-      UPDATE newsletter_sections SET ${updateFields.join(', ')} WHERE id = ?
-    `);
-
-    stmt.run(...params);
+    await this.db.run(`
+      UPDATE newsletter_sections SET ${updateFields.join(', ')} WHERE ${whereClause}
+    `, ...params);
 
     const updated = await this.findById(id);
     if (!updated) {
@@ -168,8 +157,7 @@ export class NewsletterSectionRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const stmt = this.db.prepare('DELETE FROM newsletter_sections WHERE id = ?');
-    const result = stmt.run(id);
+    const result = await this.db.run('DELETE FROM newsletter_sections WHERE id = $1', id);
 
     if (result.changes === 0) {
       throw new Error('Newsletter section not found');
@@ -183,17 +171,16 @@ export class NewsletterSectionRepository {
     const params: any[] = [];
 
     if (section_type) {
-      query += ' AND section_type = ?';
+      query += ` AND section_type = $${params.length + 1}`;
       params.push(section_type);
     }
 
     if (is_recurring !== undefined) {
-      query += ' AND is_recurring = ?';
+      query += ` AND is_recurring = $${params.length + 1}`;
       params.push(is_recurring);
     }
 
-    const stmt = this.db.prepare(query);
-    const result = stmt.get(...params) as { total: number };
+    const result = await this.db.get(query, ...params) as { total: number };
     return result.total;
   }
 
@@ -202,24 +189,24 @@ export class NewsletterSectionRepository {
     const params: any[] = [];
 
     if (sectionType) {
-      query += ' WHERE section_type = ?';
+      query += ' WHERE section_type = $1';
       params.push(sectionType);
     }
 
-    const stmt = this.db.prepare(query);
-    const result = stmt.get(...params) as { max_order: number | null };
+    const result = await this.db.get(query, ...params) as { max_order: number | null };
     return result.max_order || 0;
   }
 
   async reorderSections(sectionUpdates: Array<{ id: string; display_order: number }>): Promise<void> {
-    const transaction = this.db.transaction(() => {
+    await this.db.transaction(async (client) => {
       for (const update of sectionUpdates) {
-        const stmt = this.db.prepare('UPDATE newsletter_sections SET display_order = ?, updated_at = ? WHERE id = ?');
-        stmt.run(update.display_order, new Date().toISOString(), update.id);
+        await client.query('UPDATE newsletter_sections SET display_order = $1, updated_at = $2 WHERE id = $3', [
+          update.display_order,
+          new Date().toISOString(),
+          update.id
+        ]);
       }
     });
-
-    transaction();
   }
 
   private mapRowToSection(row: any): NewsletterSectionType {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { newsletterRepository } from '../repositories/newsletter-repository.js';
 import { initializeDatabase } from '../database/init.js';
 import { getDatabase } from '../database/connection.js';
-import type { CreateNewsletterInputType, UpdateNewsletterInputType } from '@mtrx/contracts/src/schemas/newsletter.js';
+import type { CreateNewsletterInputType, UpdateNewsletterInputType } from '@mtrx/contracts';
 
 describe('Newsletter Repository', () => {
   beforeEach(async () => {

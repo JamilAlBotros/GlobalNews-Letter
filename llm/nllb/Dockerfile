@@ -10,8 +10,9 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies with NumPy constraint
 RUN pip install --no-cache-dir \
+    "numpy<2" \
     torch==2.1.0 \
     transformers==4.35.2 \
     sentencepiece==0.1.99 \
@@ -22,11 +23,13 @@ RUN pip install --no-cache-dir \
 
 # Copy application files
 COPY app.py /app/
-COPY requirements.txt /app/ 2>/dev/null || echo "torch==2.1.0" > /app/requirements.txt
+COPY requirements.txt /app/
 
-# Create non-root user
-RUN useradd -m -u 1000 modeluser && \
-    chown -R modeluser:modeluser /app
+# Create cache directory and non-root user
+RUN mkdir -p /app/cache && \
+    useradd -m -u 1000 modeluser && \
+    chown -R modeluser:modeluser /app && \
+    chmod -R 755 /app/cache
 
 USER modeluser
 

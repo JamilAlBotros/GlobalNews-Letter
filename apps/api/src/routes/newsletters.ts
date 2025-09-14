@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { newsletterRepository } from "../repositories/newsletter-repository.js";
-import { CreateNewsletterInput, UpdateNewsletterInput } from "@mtrx/contracts/src/schemas/newsletter.js";
+import { CreateNewsletterInput, UpdateNewsletterInput } from "@mtrx/contracts";
 
 export async function newsletterRoutes(app: FastifyInstance): Promise<void> {
   // List newsletters with pagination

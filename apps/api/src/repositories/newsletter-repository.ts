@@ -1,7 +1,6 @@
-import { Database } from 'sqlite';
 import { v4 as uuidv4 } from 'uuid';
-import { getDatabase } from '../database/connection.js';
-import type { NewsletterIssueType, CreateNewsletterInputType, UpdateNewsletterInputType } from '@mtrx/contracts/src/schemas/newsletter.js';
+import { getDatabase, type PostgreSQLConnection } from '../database/connection.js';
+import type { NewsletterIssueType, CreateNewsletterInputType, UpdateNewsletterInputType } from '@mtrx/contracts';
 
 export interface DatabaseFilterOptions {
   limit?: number;
@@ -13,7 +12,7 @@ export interface DatabaseFilterOptions {
 }
 
 export class NewsletterRepository {
-  private db: Database;
+  private db: PostgreSQLConnection;
 
   constructor() {
     this.db = getDatabase();
@@ -33,21 +32,19 @@ export class NewsletterRepository {
     const params: any[] = [];
 
     if (status) {
-      query += ' AND status = ?';
+      query += ` AND status = $${params.length + 1}`;
       params.push(status);
     }
 
     if (language) {
-      query += ' AND language = ?';
+      query += ` AND language = $${params.length + 1}`;
       params.push(language);
     }
 
-    query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`;
+    query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
-
+    const rows = await this.db.all(query, ...params);
     return rows.map(this.mapRowToNewsletter);
   }
 
@@ -58,39 +55,35 @@ export class NewsletterRepository {
     const params: any[] = [];
 
     if (status) {
-      query += ' AND status = ?';
+      query += ` AND status = $${params.length + 1}`;
       params.push(status);
     }
 
     if (language) {
-      query += ' AND language = ?';
+      query += ` AND language = $${params.length + 1}`;
       params.push(language);
     }
 
-    const stmt = this.db.prepare(query);
-    const result = stmt.get(...params) as { total: number };
+    const result = await this.db.get(query, ...params) as { total: number };
     return result.total;
   }
 
   async findById(id: string): Promise<NewsletterIssueType | null> {
-    const stmt = this.db.prepare('SELECT * FROM newsletters WHERE id = ?');
-    const row = stmt.get(id);
+    const row = await this.db.get('SELECT * FROM newsletters WHERE id = $1', id);
 
     if (!row) return null;
     return this.mapRowToNewsletter(row);
   }
 
   async findByIssueNumber(issueNumber: number): Promise<NewsletterIssueType | null> {
-    const stmt = this.db.prepare('SELECT * FROM newsletters WHERE issue_number = ?');
-    const row = stmt.get(issueNumber);
+    const row = await this.db.get('SELECT * FROM newsletters WHERE issue_number = $1', issueNumber);
 
     if (!row) return null;
     return this.mapRowToNewsletter(row);
   }
 
   async getNextIssueNumber(): Promise<number> {
-    const stmt = this.db.prepare('SELECT MAX(issue_number) as max_issue FROM newsletters');
-    const result = stmt.get() as { max_issue: number | null };
+    const result = await this.db.get('SELECT MAX(issue_number) as max_issue FROM newsletters') as { max_issue: number | null };
     return (result.max_issue || 0) + 1;
   }
 
@@ -99,12 +92,10 @@ export class NewsletterRepository {
     const issueNumber = await this.getNextIssueNumber();
     const now = new Date().toISOString();
 
-    const stmt = this.db.prepare(`
+    await this.db.run(`
       INSERT INTO newsletters (id, issue_number, title, subtitle, publish_date, language, content_metadata, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `,
       id,
       issueNumber,
       data.title,
@@ -134,51 +125,50 @@ export class NewsletterRepository {
     const params: any[] = [];
 
     if (data.title !== undefined) {
-      updateFields.push('title = ?');
+      updateFields.push(`title = $${params.length + 1}`);
       params.push(data.title);
     }
 
     if (data.subtitle !== undefined) {
-      updateFields.push('subtitle = ?');
+      updateFields.push(`subtitle = $${params.length + 1}`);
       params.push(data.subtitle);
     }
 
     if (data.publish_date !== undefined) {
-      updateFields.push('publish_date = ?');
+      updateFields.push(`publish_date = $${params.length + 1}`);
       params.push(data.publish_date);
     }
 
     if (data.status !== undefined) {
-      updateFields.push('status = ?');
+      updateFields.push(`status = $${params.length + 1}`);
       params.push(data.status);
 
       // Set published_at when status changes to published
       if (data.status === 'published' && existing.status !== 'published') {
-        updateFields.push('published_at = ?');
+        updateFields.push(`published_at = $${params.length + 1}`);
         params.push(new Date().toISOString());
       }
     }
 
     if (data.language !== undefined) {
-      updateFields.push('language = ?');
+      updateFields.push(`language = $${params.length + 1}`);
       params.push(data.language);
     }
 
     if (data.content_metadata !== undefined) {
-      updateFields.push('content_metadata = ?');
+      updateFields.push(`content_metadata = $${params.length + 1}`);
       params.push(data.content_metadata ? JSON.stringify(data.content_metadata) : null);
     }
 
-    updateFields.push('updated_at = ?');
+    updateFields.push(`updated_at = $${params.length + 1}`);
     params.push(new Date().toISOString());
 
+    const whereClause = `id = $${params.length + 1}`;
     params.push(id);
 
-    const stmt = this.db.prepare(`
-      UPDATE newsletters SET ${updateFields.join(', ')} WHERE id = ?
-    `);
-
-    stmt.run(...params);
+    await this.db.run(`
+      UPDATE newsletters SET ${updateFields.join(', ')} WHERE ${whereClause}
+    `, ...params);
 
     const updated = await this.findById(id);
     if (!updated) {
@@ -189,8 +179,7 @@ export class NewsletterRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const stmt = this.db.prepare('DELETE FROM newsletters WHERE id = ?');
-    const result = stmt.run(id);
+    const result = await this.db.run('DELETE FROM newsletters WHERE id = $1', id);
 
     if (result.changes === 0) {
       throw new Error('Newsletter not found');

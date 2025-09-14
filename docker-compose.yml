@@ -31,18 +31,16 @@ services:
       - DB_PASSWORD=dev_password_change_in_prod
       - DB_NAME=globalnews
       - DATABASE_URL=postgresql://globalnews:dev_password_change_in_prod@db:5432/globalnews
-      - LLM_PROVIDER=ollama
-      - LLM_BASE_URL=http://ollama-service:8001
-      - LLM_MODEL=llama3.1:8b
+      - LLM_PROVIDER=custom
+      - LLM_BASE_URL=http://llm-api:8000
+      - LLM_MODEL=llama3-8b
       - LLM_MAX_TOKENS=1000
       - LLM_TEMPERATURE=0.3
-      - TRANSLATION_SERVICE_URL=http://nllb-service:8000
+      - TRANSLATION_SERVICE_URL=http://llm-api:8000
     depends_on:
       db:
         condition: service_healthy
-      nllb-service:
-        condition: service_healthy
-      ollama-service:
+      llm-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3333/healthz', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
@@ -50,6 +48,33 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  llm-api:
+    build:
+      context: ./services/llm-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount your local models directory here
+      - ./models:/app/models:ro
+    environment:
+      - PYTHONPATH=/app
+      - TOKENIZERS_PARALLELISM=false
+      - TRANSFORMERS_CACHE=/app/models/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
 
   frontend:
     build:
@@ -63,57 +88,9 @@ services:
     depends_on:
       - api
 
-  nllb-service:
-    build:
-      context: ./llm/nllb
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - HF_HOME=/app/cache
-    volumes:
-      - nllb_cache:/app/cache
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 30s
-      start_period: 120s
-      retries: 3
-
-  ollama-service:
-    build:
-      context: ./llm/ollama
-      dockerfile: Dockerfile
-    ports:
-      - "8001:8001"
-      - "11434:11434"
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-    volumes:
-      - ollama_data:/home/modeluser/.ollama
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-        reservations:
-          memory: 4G
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health')"]
-      interval: 30s
-      timeout: 30s
-      start_period: 300s
-      retries: 5
 
 volumes:
   postgres_data:
-  nllb_cache:
-  ollama_data:
 
 networks:
   default:

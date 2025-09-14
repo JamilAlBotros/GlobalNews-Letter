@@ -1,5 +1,5 @@
 import { newsletterSectionRepository } from '../repositories/newsletter-section-repository.js';
-import type { CreateNewsletterSectionInputType } from '@mtrx/contracts/src/schemas/newsletter.js';
+import type { CreateNewsletterSectionInputType } from '@mtrx/contracts';
 
 export class NewsletterTemplateService {
   

@@ -1,5 +1,8 @@
 // Newsletter Management Schemas
 import { z } from "zod";
+import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
+
+extendZodWithOpenApi(z);
 import { SupportedLanguage } from "./llm.js";
 
 // Newsletter Issue

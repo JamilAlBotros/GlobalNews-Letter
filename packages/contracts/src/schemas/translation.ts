@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
+
+extendZodWithOpenApi(z);
 
 export const TranslationJob = z.object({
   id: z.string().openapi({ description: "Translation job identifier" }),

@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
+
+extendZodWithOpenApi(z);
 
 // Supported languages enum
 export const SupportedLanguage = z.enum(['en', 'es', 'pt', 'fr', 'ar', 'zh', 'ja']);
@@ -163,25 +166,7 @@ export const ContentAnalysisRequestInput = z.object({
   ])).default(['all'])
 }).openapi('ContentAnalysisRequestInput');
 
-export const ContentAnalysisResponse = z.object({
-  summary: SummarizationResponse.optional(),
-  sentiment: SentimentAnalysisResponse.optional(),
-  bias: BiasDetectionResponse.optional(),
-  quality: QualityAssessmentResponse.optional(),
-  categorization: CategorizationResponse.optional(),
-  topics: TopicExtractionResponse.optional(),
-  overall_processing_time_ms: z.number(),
-  analysis_timestamp: z.string().datetime()
-}).openapi('ContentAnalysisResponse');
-
-// Content quality assessment endpoint schemas
-export const QualityAssessmentRequestInput = z.object({
-  text: z.string().min(1).max(15000),
-  title: z.string().optional(),
-  url: z.string().url().optional(),
-  language: SupportedLanguage.optional()
-}).openapi('QualityAssessmentRequestInput');
-
+// Define QualityAssessmentResponse before using it
 export const QualityAssessmentResponse = z.object({
   overall_score: z.number().min(0).max(1),
   readability_score: z.number().min(0).max(1),
@@ -201,6 +186,25 @@ export const QualityAssessmentResponse = z.object({
   }),
   recommendations: z.array(z.string()).optional()
 }).openapi('QualityAssessmentResponse');
+
+export const ContentAnalysisResponse = z.object({
+  summary: SummarizationResponse.optional(),
+  sentiment: SentimentAnalysisResponse.optional(),
+  bias: BiasDetectionResponse.optional(),
+  quality: QualityAssessmentResponse.optional(),
+  categorization: CategorizationResponse.optional(),
+  topics: TopicExtractionResponse.optional(),
+  overall_processing_time_ms: z.number(),
+  analysis_timestamp: z.string().datetime()
+}).openapi('ContentAnalysisResponse');
+
+// Content quality assessment endpoint schemas
+export const QualityAssessmentRequestInput = z.object({
+  text: z.string().min(1).max(15000),
+  title: z.string().optional(),
+  url: z.string().url().optional(),
+  language: SupportedLanguage.optional()
+}).openapi('QualityAssessmentRequestInput');
 
 // Batch processing schemas
 export const BatchTranslationRequestInput = z.object({

@@ -13,7 +13,7 @@ COPY apps/api/package*.json ./apps/api/
 COPY packages/contracts/package*.json ./packages/contracts/
 
 # Install dependencies with frozen lockfile
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code (excluding node_modules which are already installed)
 COPY apps/api/src ./apps/api/src
@@ -23,8 +23,8 @@ COPY packages/contracts/tsconfig*.json ./packages/contracts/
 COPY tsconfig*.json ./
 
 # Build the application
-RUN pnpm build --workspace=@mtrx/api
-RUN pnpm build --workspace=@mtrx/contracts
+RUN pnpm --filter=@mtrx/contracts build
+RUN pnpm --filter=@mtrx/api build
 
 # Production stage
 FROM node:20-alpine AS runtime
@@ -56,7 +56,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/packages/contracts/tsconfig*.json
 COPY --from=builder --chown=nodejs:nodejs /app/tsconfig*.json ./
 
 # Install all dependencies (including dev dependencies for lint/typecheck) using pnpm
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Switch to non-root user
 USER nodejs

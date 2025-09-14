@@ -1,0 +1,24 @@
+# Development version without GPU requirements
+version: '3.8'
+
+services:
+  llm-api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount your local models directory here
+      - ./models:/app/models:ro
+    environment:
+      - PYTHONPATH=/app
+      - TOKENIZERS_PARALLELISM=false
+      - TRANSFORMERS_CACHE=/app/models/.cache
+      - CUDA_VISIBLE_DEVICES=""  # Force CPU-only for development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s

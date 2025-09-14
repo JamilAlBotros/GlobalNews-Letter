@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
+
+extendZodWithOpenApi(z);
 
 export const PollingStatus = z.object({
   is_running: z.boolean().openapi({ description: "Whether polling is currently active" }),

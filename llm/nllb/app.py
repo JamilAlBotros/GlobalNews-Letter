@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="NLLB Translation Service", version="1.0.0")
 
 # Model configuration
-MODEL_NAME = "facebook/nllb-200-distilled-600M"
+MODEL_NAME = "/home/jamil/models/nllb-200"
 model = None
 tokenizer = None
 

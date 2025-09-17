@@ -11,7 +11,8 @@ services:
       - HF_HOME=/app/cache
       - TRANSFORMERS_CACHE=/app/cache
     volumes:
-      - nllb_cache:/app/cache
+      - /home/jamil/models:/app/cache
+      - nllb_cache:/app/cache_backup
     deploy:
       resources:
         limits:

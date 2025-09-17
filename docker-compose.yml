@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: dev_password_change_in_prod
       POSTGRES_DB: globalnews
     ports:
-      - "5432:5432"
+      - "0.0.0.0:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     ports:
-      - "3333:3333"
+      - "127.0.0.1:3333:3333"  # Only accessible from localhost
     environment:
       - NODE_ENV=development
       - PORT=3333
@@ -48,16 +48,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - default
+      - nginx-proxy
 
   llm-api:
     build:
       context: ./services/llm-api
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"  # Only accessible from localhost
     volumes:
       # Mount your local models directory here
-      - ./models:/app/models:ro
+      - /home/jamil/models:/app/models:ro
     environment:
       - PYTHONPATH=/app
       - TOKENIZERS_PARALLELISM=false
@@ -75,18 +78,24 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
+    networks:
+      - default
+      - nginx-proxy
 
   frontend:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"  # Only accessible from localhost
     environment:
       - NODE_ENV=development
       - BASE_API=http://api:3333
     depends_on:
       - api
+    networks:
+      - default
+      - nginx-proxy
 
 
 volumes:
@@ -95,3 +104,7 @@ volumes:
 networks:
   default:
     name: globalnews_network
+  # External network for reverse proxy access
+  nginx-proxy:
+    external: true
+    name: nginx-proxy-network

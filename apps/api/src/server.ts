@@ -13,6 +13,7 @@ import { newsletterRoutes } from "./routes/newsletter.js";
 import { newsletterRoutes as newsletterCrudRoutes } from "./routes/newsletters.js";
 import { newsletterSectionRoutes } from "./routes/newsletter-sections.js";
 import { llmRoutes } from "./routes/llm.js";
+import { llmServicesRoutes } from "./routes/llm-services.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { newsletterTranslationJobRoutes } from "./routes/newsletter-translation-jobs.js";
@@ -121,6 +122,7 @@ await app.register(newsletterDraftRoutes);
 await app.register(newsletterExportRoutes);
 await app.register(googleRSSFeedRoutes);
 await app.register(llmRoutes);
+await app.register(llmServicesRoutes);
 await app.register(settingsRoutes);
 await app.register(dashboardRoutes);
 

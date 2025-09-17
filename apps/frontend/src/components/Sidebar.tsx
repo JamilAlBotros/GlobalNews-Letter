@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   Edit3,
+  Cpu,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -69,6 +70,7 @@ const navigationCategories: NavCategory[] = [
     items: [
       { name: 'Health Monitor', href: '/health', icon: Activity },
       { name: 'Database', href: '/database', icon: Database },
+      { name: 'LLM Services', href: '/llm-services', icon: Cpu },
       { name: 'Settings', href: '/settings', icon: Settings },
     ],
   },

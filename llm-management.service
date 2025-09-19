@@ -1,0 +1,29 @@
+[Unit]
+Description=LLM Management API Service
+Documentation=https://github.com/jamil/GlobalNews-Letter
+After=network.target
+
+[Service]
+Type=simple
+User=jamil
+Group=jamil
+WorkingDirectory=/home/jamil/projects/GlobalNews-Letter
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=/home/jamil/projects/GlobalNews-Letter
+ExecStart=/usr/bin/python3 /home/jamil/projects/GlobalNews-Letter/llm-management-api.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llm-management
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/jamil/projects/GlobalNews-Letter
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target
